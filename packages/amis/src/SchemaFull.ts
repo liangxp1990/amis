@@ -141,6 +141,7 @@ import {AMISDateRangeSchema} from './renderers/DateRange';
 import {AMISPasswordSchema} from './renderers/Password';
 import {AMISWordsSchema} from './renderers/Words';
 import {AMISRadioSchema} from './renderers/Form/Radio';
+import {AMISCaptchaSchema} from './renderers/Form/Captcha';
 import {AMISSliderSchema} from './renderers/Slider';
 import {AMISMultilineTextSchema} from './renderers/MultilineText';
 import {AMISDialogSchema} from './renderers/Dialog';
@@ -165,6 +166,8 @@ declare module 'amis-core' {
     'button-group': AMISButtonGroupSchema;
     /** 面包屑导航组件，显示当前页面在网站中的位置 */
     'breadcrumb': AMISBreadcrumbSchema;
+    /** 行为验证码表单项（滑动拼图/点选文字，AJ-Captcha 协议） */
+    'captcha': AMISCaptchaSchema;
     /** 卡片组件，用于展示信息块 */
     'card': AMISCardSchema;
     /** 卡片组件（别名），用于展示信息块 */

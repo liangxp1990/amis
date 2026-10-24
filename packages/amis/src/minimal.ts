@@ -48,6 +48,12 @@ registerRenderer({
   type: 'button-toolbar',
   getComponent: () => import('./renderers/Form/ButtonToolbar')
 });
+// import './renderers/Form/Captcha';
+registerRenderer({
+  type: 'captcha',
+  isFormItem: true,
+  getComponent: () => import('./renderers/Form/Captcha')
+});
 
 // import './renderers/Breadcrumb';
 registerRenderer({

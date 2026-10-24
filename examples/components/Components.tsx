@@ -582,6 +582,14 @@ export const components = [
       },
 
       {
+        label: 'Captcha 验证码',
+        path: '/zh-CN/components/form/captcha',
+        component: React.lazy(() =>
+          import('../../docs/zh-CN/components/form/captcha.md').then(wrapDoc)
+        )
+      },
+
+      {
         label: 'ChartRadios 图表单选框',
         path: '/zh-CN/components/form/chart-radios',
         component: React.lazy(() =>

@@ -28,6 +28,7 @@ export * from './Form/ChainedSelect'; // 链式下拉框
 export * from './DropDownButton'; // 下拉按钮
 export * from './Form/Checkboxes'; // 复选框
 export * from './Form/Radios'; // 单选框
+export * from './Form/Captcha'; // 行为验证码
 export * from './Form/Checkbox'; // 勾选框
 export * from './Form/InputDate'; // 日期
 export * from './Form/InputDateRange'; // 日期范围

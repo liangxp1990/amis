@@ -1,0 +1,472 @@
+// 行为验证码（AJ-Captcha 协议）表单项样式
+// 全部使用 amis 设计令牌（CSS 变量），跟随主题（cxd/antd/dark）自动换肤
+
+// 失败抖动动画（对齐腾讯失败态反馈）
+@keyframes captcha-shake {
+  10%,
+  90% {
+    transform: translateX(-1px);
+  }
+  20%,
+  80% {
+    transform: translateX(2px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-3px);
+  }
+  40%,
+  60% {
+    transform: translateX(3px);
+  }
+}
+
+.#{$ns}CaptchaControl {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: middle;
+
+  &.is--disabled {
+    opacity: 0.65;
+    pointer-events: none;
+  }
+
+  // H5：滑轨/提示行禁止长按选中，防拖动时触发系统文本选择
+  @media (max-width: 768px) {
+    .#{$ns}CaptchaControl-slider,
+    .#{$ns}CaptchaControl-tipbar,
+    .#{$ns}CaptchaControl-footer {
+      user-select: none;
+    }
+  }
+
+  // 加载中（Spinner 无 children 时 overlay 不生效，自行绝对定位居中）
+  &-spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 2;
+    transform: translate(-50%, -50%);
+  }
+
+  // 图片区（img/canvas 均为 block，无需 line-height: 0 消缝；
+  // 且它会被绝对定位的浮层文字继承导致行盒塌陷、字形被 overflow 裁底）
+  &-imgBox {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--borderColor);
+    border-radius: var(--borderRadius);
+    background: var(--light);
+  }
+
+  &-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    user-select: none;
+    -webkit-touch-callout: none; // H5：禁长按呼出系统菜单
+
+    &.is--clickable {
+      cursor: pointer;
+    }
+  }
+
+  // 曲线画布（curveSlider）
+  &-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  // 滑动拼图小块（全高条，随滑块移动）
+  &-piece {
+    position: absolute;
+    top: 0;
+    overflow: hidden;
+    pointer-events: none;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+
+    > img {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  // 点选模式：已点坐标标记
+  &-marker {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: px2rem(20px);
+    height: px2rem(20px);
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: var(--primary);
+    box-shadow: 0 0 0 1px var(--colors-neutral-fill-11, #fff),
+      0 2px 4px rgba(0, 0, 0, 0.15);
+    color: var(--colors-neutral-fill-11, #fff);
+    font-size: var(--fontSizeBase);
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  // 底部状态栏：品牌说明 + 刷新入口（对齐腾讯底部栏布局）
+  &-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: var(--gap-sm, 8px);
+  }
+
+  &-footerText {
+    font-size: var(--fontSizeXs, 12px);
+    font-weight: 600;
+    color: var(--text--muted-color);
+  }
+
+  &-footerRefresh {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: px2rem(22px);
+    height: px2rem(22px);
+    color: var(--text--muted-color);
+    cursor: pointer;
+    transition: color var(--animation-duration, 0.2s);
+
+    // H5：扩大点击热区（视觉尺寸不变）
+    @media (max-width: 768px) {
+      width: px2rem(28px);
+      height: px2rem(28px);
+    }
+
+    &:hover {
+      color: var(--primary);
+    }
+  }
+
+  &-footerRefreshIcon {
+    display: block;
+    width: px2rem(16px);
+    height: px2rem(16px);
+  }
+
+  // 结果遮罩（对齐腾讯）：成功=白蒙层+绿圆对勾+文案；失败=浅粉蒙层
+  &-resultOverlay {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: px2rem(8px);
+    background: var(--background);
+    pointer-events: none;
+
+    &.is--success {
+      opacity: 0.92;
+    }
+
+    &.is--fail {
+      background: rgba(230, 67, 64, 0.08);
+    }
+  }
+
+  &-resultIcon {
+    width: px2rem(64px);
+    height: px2rem(64px);
+    color: var(--success);
+  }
+
+  &-resultText {
+    font-size: var(--fontSizeLg, 16px);
+    font-weight: 600;
+    color: var(--text-color);
+  }
+
+  // 失败提示条（浮层贴图片底部，浅粉底红字，不占布局空间）
+  &-errorbar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 5;
+    padding: px2rem(4px) px2rem(10px);
+    border-radius: 0 0 var(--borderRadius) var(--borderRadius);
+    background: rgba(230, 67, 64, 0.08);
+    font-size: var(--fontSizeBase);
+    line-height: 1.5;
+    color: var(--danger);
+    text-align: center;
+    pointer-events: none;
+  }
+
+  // 加载失败态
+  &-error {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: px2rem(8px);
+    color: var(--danger);
+    font-size: var(--fontSizeBase);
+    line-height: 1.5;
+
+    .icon {
+      width: px2rem(16px);
+      height: px2rem(16px);
+    }
+  }
+
+  &-errorRetry {
+    color: var(--primary);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--primary-onHover);
+    }
+  }
+
+  // 滑轨（腾讯风格：更厚、浅灰底、无内嵌文字时依然饱满）
+  &-slider {
+    position: relative;
+    height: px2rem(44px);
+    margin-top: var(--gap-sm, 8px);
+    border: 1px solid var(--borderColor);
+    border-radius: var(--borderRadius);
+    background: var(--light);
+    line-height: 1;
+
+    // 已滑过区域（腾讯风格：主色 ~10% 的淡色调，不用饱和主色填充）
+    &Trail {
+      position: absolute;
+      top: -1px;
+      bottom: -1px;
+      left: -1px;
+      border-radius: var(--borderRadius);
+      background: var(--primary);
+      opacity: 0.1;
+    }
+
+    // 滑块（正方形，边长 = 滑轨高度；白底 + 阴影 + 双箭头，对齐腾讯把手样式）
+    &Handle {
+      position: absolute;
+      top: -1px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: px2rem(44px);
+      height: calc(100% + 2px);
+      border: 1px solid var(--borderColor);
+      border-radius: var(--borderRadius);
+      background: var(--background);
+      color: var(--primary);
+      cursor: grab;
+      z-index: 1;
+      touch-action: none;
+      box-shadow: var(--shadows-shadow-2, 0 2px 6px rgba(0, 0, 0, 0.1));
+      transition: border-color var(--animation-duration, 0.2s),
+        background-color var(--animation-duration, 0.2s),
+        color var(--animation-duration, 0.2s);
+
+      .icon {
+        width: px2rem(18px);
+        height: px2rem(18px);
+      }
+
+      &:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+      }
+    }
+
+    // 中间提示文案（铺满滑轨后 flex 双向居中，避免只设 left/right 时停在顶部）
+    &Text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: var(--fontSizeBase);
+      color: var(--text--muted-color);
+      pointer-events: none;
+      transition: opacity var(--animation-duration, 0.2s);
+    }
+
+    // 状态修饰
+    &.is--dragging {
+      // 拖动中把手实心主色 + 白色双箭头（对齐腾讯拖动态）
+      .#{$ns}CaptchaControl-sliderHandle {
+        border-color: var(--primary);
+        background: var(--primary);
+        color: var(--white);
+      }
+
+      .#{$ns}CaptchaControl-sliderText {
+        opacity: 0;
+      }
+    }
+
+    &.is--checking {
+      .#{$ns}CaptchaControl-sliderHandle {
+        cursor: wait;
+      }
+    }
+
+    &.is--success {
+      border-color: var(--success);
+
+      .#{$ns}CaptchaControl-sliderTrail {
+        background: var(--success);
+        opacity: 0.12;
+      }
+
+      .#{$ns}CaptchaControl-sliderHandle {
+        border-color: var(--success);
+        background: var(--success);
+        color: var(--white);
+        cursor: default;
+      }
+
+      .#{$ns}CaptchaControl-sliderText {
+        color: var(--success);
+      }
+    }
+
+    &.is--fail {
+      border-color: var(--danger);
+      animation: captcha-shake 0.4s ease;
+
+      .#{$ns}CaptchaControl-sliderTrail {
+        background: var(--danger);
+        opacity: 0.15;
+      }
+
+      .#{$ns}CaptchaControl-sliderHandle {
+        border-color: var(--danger);
+        background: var(--danger);
+        color: var(--white);
+      }
+
+      .#{$ns}CaptchaControl-sliderText {
+        color: var(--danger);
+      }
+    }
+  }
+
+  // 点选文字模式：提示行（仅嵌入模式渲染；纯文本指引，不做按钮样式）
+  &-tipbar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: px2rem(22px);
+    margin-bottom: var(--gap-xs, 4px);
+    font-size: var(--fontSizeBase);
+    font-weight: 600;
+    color: var(--text-color);
+
+    &Words {
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    &Success {
+      display: inline-flex;
+      align-items: center;
+      gap: px2rem(4px);
+      color: var(--success);
+
+      .icon {
+        width: px2rem(16px);
+        height: px2rem(16px);
+      }
+    }
+
+    &.is--fail {
+      color: var(--danger);
+    }
+  }
+}
+
+// 弹出模式（腾讯验证码风格：图标触发按钮 + 紧凑弹窗）
+.#{$ns}CaptchaControlWrap {
+  display: inline-block;
+}
+
+// 触发按钮内的图标与文案
+.#{$ns}CaptchaControl-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: px2rem(6px);
+}
+
+.#{$ns}CaptchaControl-triggerIcon {
+  width: px2rem(16px);
+  height: px2rem(16px);
+}
+
+.#{$ns}CaptchaControl-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.#{$ns}CaptchaControl-pop {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: calc(100vw - #{px2rem(32px)}); // H5：小屏不超出视口
+  padding: px2rem(16px) px2rem(16px) px2rem(20px);
+  border-radius: var(--borderRadius);
+  background: var(--background);
+  box-shadow: var(--shadows-shadow-4, 0 6px 16px 0 rgba(0, 0, 0, 0.08));
+
+  @media (max-width: 768px) {
+    padding: px2rem(12px) px2rem(12px) px2rem(16px);
+  }
+}
+
+.#{$ns}CaptchaControl-popHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: px2rem(12px);
+}
+
+// 标题即动态操作指引（腾讯风格："拖动下方滑块完成拼图" / "请依次点击：字"）
+.#{$ns}CaptchaControl-popTitle {
+  font-size: var(--fontSizeLg, 16px);
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.#{$ns}CaptchaControl-popClose {
+  display: flex;
+  align-items: center;
+  color: var(--text--muted-color);
+  cursor: pointer;
+  transition: color var(--animation-duration, 0.2s);
+
+  .icon {
+    width: px2rem(14px);
+    height: px2rem(14px);
+  }
+
+  &:hover {
+    color: var(--primary);
+  }
+}
+
+.#{$ns}CaptchaControl-popBody {
+  text-align: center;
+}
