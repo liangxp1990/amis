@@ -179,6 +179,14 @@ registerRenderer({
 - **替换系统渲染器**：同 type 重新注册需 `override: true`
 - **编辑器支持**：继续用 amis-new-editor-plugin skill 加编辑器插件
 
+## 实战铁律（captcha 组件开发实证，违反必踩坑）
+
+1. **env.fetcher 必须传原始 api 配置**：fetcher 已被 factory 的 wrapFetcher 包装（内部二次 buildApi）。提前 `buildApi(api, params)` 会把参数固化进 `api.data`，第二参数的动态字段（token/body 等）**全部被丢弃**。正确：`env.fetcher(apiConfig字符串或对象, createObject(data, {全部动态字段}))`。
+2. **表单项 Props 类型 `extends FormControlProps`**（amis-core 导出）：不要自己拼 `RendererProps + Schema`——Schema 链上 `AMISClassName` 类型的属性会触发 @FormItem 装饰器 TS1238（逐个 Omit 是打地鼠）；也不要把继承来的 `onChange` 重声明为可选（TS2430）。交集键用 `Omit<AMISXxxSchema, 'type' | 'className' | keyof FormControlProps>` 消除。
+3. **Schema 属性命名避让**：`mode` 是表单布局属性（horizontal/inline/normal），组件自己的"形态"类属性必须换名（如 `displayMode`），否则类型不兼容。
+4. **组件动作**：组件实现 `doAction(action, data, throwErrors)` 分发自定义动作（如 open/refresh/clear/reset）；动作链调用写法是 `{"actionType": "<动作名>", "componentId": "xxx"}`——**不是** `{actionType:'component', args:{action:'xxx'}}`（v6 无 args.action 处理，永不进目标分支）。编辑器插件 actions 数组同步登记才出现在动作面板。
+5. **H5 自适应模式**：交互型图形控件用 `width + maxWidth:'100%' + aspectRatio` 替代固定高度；坐标/几何换算一律按渲染时 `offsetWidth/offsetHeight` 动态计算（jsdom 里恒为 0，测试需 `Object.defineProperty` mock），任意显示尺寸下数学自洽。触摸交互用 pointer 事件（`touch-action:none` 防滚动劫持）+ mouse 事件兜底（双绑定需防重复：会话存在即 return）。
+
 ## 深入阅读（references/）
 
 - **references/renderer-mechanisms.md**：三个装饰器注入 props 全清单、注册/查找/weight 机制、事件系统、Scoped 数据域、themeable

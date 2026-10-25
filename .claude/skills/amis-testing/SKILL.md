@@ -86,3 +86,11 @@ makeEnv({
 4. **表单提交链路**：mock fetcher 断言请求体；触发失败场景返回 `data: {status: 500, msg: 'x'}`
 5. **name 取值**：给 page/form 组件都配 name 后 `amisRender(...)` 返回的 scoped 可 `getComponentByName`，但单测里更常用的是从 store 断言
 6. 新用例先跑一遍看输出再补断言：`./node_modules/.bin/jest <文件> 2>&1 | head -50`
+
+## jsdom 五坑（captcha 组件开发实证，逐一踩过）
+
+1. **fetcher mock 是单 config 参数**：`makeEnv({fetcher})` 传入的函数被 factory 的 wrapFetcher 包装，mock 收到 `(config)` 而非 `(config, data)`——**POST 请求体在 `config.data`**。`url` 取法要兼容字符串：`const url = typeof config === 'string' ? config : config?.url || ''`。
+2. **waitFor 必须等数据依赖的 DOM 状态**：fetcher 被调用 ≠ 响应已 setState（中间隔 wrapFetcher→adaptor 多个异步 hop）；静态文案（如提示语）首帧就存在，等它等于没等。等"只有数据到位才会出现的信号"：img src 含真实 base64、wordList 渲染出的字符、error 元素出现等。无 DOM 信号时 `waitFor(fetcher 计数) + await wait(300)` 兜底。
+3. **无 TextEncoder 全局**：jsdom 不提供，组件代码别用（用 `unescape(encodeURIComponent(str))` 实现 UTF-8 编码，顺带兼容老浏览器）。
+4. **拖动类交互用 mouse 事件**：`fireEvent.pointerMove/Up` 在 jsdom 不可靠（PointerEvent 构造缺失），用 `fireEvent.mouseDown(handle, {clientX})` + `fireEvent.mouseMove(document, ...)` + `fireEvent.mouseUp(document)`。
+5. **offsetWidth/offsetHeight 恒为 0**：布局不计算，涉及几何的组件必须 mock：`Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {configurable: true, get: () => 310})`（组件按实际值换算时测试才可预测）。
