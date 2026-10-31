@@ -1,0 +1,13 @@
+{
+  "name": "amis-docs-mock-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "amis 文档站独立 mock 服务（express 包装仓库 mock/ 目录）",
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

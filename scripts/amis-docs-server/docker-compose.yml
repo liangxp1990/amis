@@ -1,0 +1,36 @@
+# amis 定制文档站 + mock 服务（部署于 103.90.155.117:/data/traefik-routes/amis/）
+# 惯例遵循该机 traefik docker-labels 模式：amis-web 声明容器暴露给 traefik，
+# TLS 由 mytlschallenge 自动签发；amis-mock 仅内网被 nginx 反代。
+# 目录约定（由 scripts/amis-docs-server/upload.sh 同步）：
+#   ./mock-server/  = 仓库 scripts/amis-docs-server/mock-server + 仓库 mock/
+#   ./site/amis/    = gh-pages 产物（IS_AISUDA=1 构建）
+services:
+  amis-mock:
+    image: node:20-alpine
+    working_dir: /app
+    command: node server.mjs
+    volumes:
+      - ./mock-server:/app
+    restart: unless-stopped
+
+  amis-web:
+    image: nginx:latest
+    depends_on:
+      - amis-mock
+    volumes:
+      - ./default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./site:/usr/share/nginx/html:ro
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=n8n-compose_default
+      - traefik.http.routers.amis-web.rule=Host(`amis.elstgl.com`)
+      - traefik.http.routers.amis-web.tls=true
+      - traefik.http.routers.amis-web.tls.certresolver=mytlschallenge
+      - traefik.http.services.amis-web.loadbalancer.server.port=80
+    networks:
+      - n8n-compose_default
+      - default
+
+networks:
+  n8n-compose_default:
+    external: true
