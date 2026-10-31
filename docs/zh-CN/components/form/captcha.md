@@ -1,9 +1,9 @@
 ---
-title: Captcha 验证码
+title: Captcha 行为验证码
 description:
 type: 0
 group: null
-menuName: Captcha 验证码
+menuName: Captcha 行为验证码
 icon:
 order: 55
 ---

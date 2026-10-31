@@ -582,7 +582,7 @@ export const components = [
       },
 
       {
-        label: 'Captcha 验证码',
+        label: 'Captcha 行为验证码',
         path: '/zh-CN/components/form/captcha',
         component: React.lazy(() =>
           import('../../docs/zh-CN/components/form/captcha.md').then(wrapDoc)

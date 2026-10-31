@@ -30,7 +30,7 @@ export class CaptchaControlPlugin extends BasePlugin {
   $schema = '/schemas/AMISCaptchaSchema.json';
 
   // 组件名称
-  name = '验证码';
+  name = '行为验证码';
   isBaseComponent = true;
   icon = 'fa fa-shield';
   description = '行为验证码，支持滑动拼图、滑块曲线、点选文字（AJ-Captcha 协议）';
