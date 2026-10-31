@@ -1,0 +1,345 @@
+@import '../functions';
+
+// Semi Design 主题（字节跳动）：https://semi.design
+// 色板来源 @douyinfe/semi-theme-default（scss/_palette.scss、scss/global.scss）
+// Semi 色板 0-9（浅→深）反转映射到 amis 梯度 1-10（深→浅），
+// 使语义层锚点自然对齐：brand-5 = Semi blue-5（主色 #0064FA）、
+// brand-4 = Semi blue-6（active/hover 加深色）、brand-10 = Semi blue-0（primary 浅背景）
+$ns: 'semi-';
+
+:root {
+  --colors-neutral-fill-none: transparent;
+  // Semi red 色板（249,57,32 为 danger 主色）
+  --colors-error-1: #6a0103;
+  --colors-error-2: #8e0805;
+  --colors-error-3: #b2140c;
+  --colors-error-4: #d52515;
+  --colors-error-5: #f93920;
+  --colors-error-6: #fa664c;
+  --colors-error-7: #fb9078;
+  --colors-error-8: #fdb7a5;
+  --colors-error-9: #feddd2;
+  --colors-error-10: #fef2ed;
+  // Semi orange 色板（252,136,0 为 warning 主色）
+  --colors-warning-1: #541d00;
+  --colors-warning-2: #7e3100;
+  --colors-warning-3: #a84a00;
+  --colors-warning-4: #d26700;
+  --colors-warning-5: #fc8800;
+  --colors-warning-6: #fda633;
+  --colors-warning-7: #fdc165;
+  --colors-warning-8: #fed998;
+  --colors-warning-9: #feeecc;
+  --colors-warning-10: #fff8ea;
+  // Semi green 色板（59,179,70 为 success 主色）
+  --colors-success-1: #113c18;
+  --colors-success-2: #1b5924;
+  --colors-success-3: #25772f;
+  --colors-success-4: #30953b;
+  --colors-success-5: #3bb346;
+  --colors-success-6: #5ac262;
+  --colors-success-7: #7dd182;
+  --colors-success-8: #a4e0a7;
+  --colors-success-9: #d0f0d1;
+  --colors-success-10: #ecf7ec;
+  // Semi 的 info 与 primary 同为 blue 色板
+  --colors-link-1: #002c6b;
+  --colors-link-2: #003d8f;
+  --colors-link-3: #004fb3;
+  --colors-link-4: #0062d6;
+  --colors-link-5: #0064fa;
+  --colors-link-6: #3295fb;
+  --colors-link-7: #65b2fc;
+  --colors-link-8: #98cdfd;
+  --colors-link-9: #cbe7fe;
+  --colors-link-10: #eaf5ff;
+  --colors-info-1: #002c6b;
+  --colors-info-2: #003d8f;
+  --colors-info-3: #004fb3;
+  --colors-info-4: #0062d6;
+  --colors-info-5: #0064fa;
+  --colors-info-6: #3295fb;
+  --colors-info-7: #65b2fc;
+  --colors-info-8: #98cdfd;
+  --colors-info-9: #cbe7fe;
+  --colors-info-10: #eaf5ff;
+  --colors-other-1: #002c6b;
+  --colors-other-2: #003d8f;
+  --colors-other-3: #004fb3;
+  --colors-other-4: #0062d6;
+  --colors-other-5: #0064fa;
+  --colors-other-6: #3295fb;
+  --colors-other-7: #65b2fc;
+  --colors-other-8: #98cdfd;
+  --colors-other-9: #cbe7fe;
+  --colors-other-10: #eaf5ff;
+  // Semi blue 色板（0,100,250 为 primary 主色）
+  --colors-brand-1: #002c6b;
+  --colors-brand-2: #003d8f;
+  --colors-brand-3: #004fb3;
+  --colors-brand-4: #0062d6;
+  --colors-brand-5: #0064fa;
+  --colors-brand-6: #3295fb;
+  --colors-brand-7: #65b2fc;
+  --colors-brand-8: #98cdfd;
+  --colors-brand-9: #cbe7fe;
+  --colors-brand-10: #eaf5ff;
+  // Semi grey 色板 + text 透明度档（text-0/1/2/3 = 1 / .8 / .62 / .35）
+  --colors-neutral-text-1: #16191d;
+  --colors-neutral-text-2: #1c1f23;
+  --colors-neutral-text-3: #333539;
+  --colors-neutral-text-4: #41464c;
+  --colors-neutral-text-5: #6b7075;
+  --colors-neutral-text-6: #727477;
+  --colors-neutral-text-7: #888d92;
+  --colors-neutral-text-8: #a7abb0;
+  --colors-neutral-text-9: #c6cacd;
+  --colors-neutral-text-10: #e6e8ea;
+  --colors-neutral-text-11: #ffffff;
+  // fill-8/9 取 Semi fill-0/fill-1（rgba(46,50,56,.05)/.09），
+  // fill-10 为 Semi grey-0（#F9F9F9），fill-12 为 Semi primary 浅背景
+  --colors-neutral-fill-1: #16191d;
+  --colors-neutral-fill-2: #1c1f23;
+  --colors-neutral-fill-3: #2e3238;
+  --colors-neutral-fill-4: #41464c;
+  --colors-neutral-fill-5: #555b61;
+  --colors-neutral-fill-6: #6b7075;
+  --colors-neutral-fill-7: #888d92;
+  --colors-neutral-fill-8: rgba(46, 50, 56, 0.05);
+  --colors-neutral-fill-9: rgba(46, 50, 56, 0.09);
+  --colors-neutral-fill-10: #f9f9f9;
+  --colors-neutral-fill-11: #ffffff;
+  --colors-neutral-fill-12: #eaf5ff;
+  // line-8 = Semi 默认描边 rgba(28,31,35,.08) 混白
+  --colors-neutral-line-1: #16191d;
+  --colors-neutral-line-2: #1c1f23;
+  --colors-neutral-line-3: #2e3238;
+  --colors-neutral-line-4: #41464c;
+  --colors-neutral-line-5: #555b61;
+  --colors-neutral-line-6: #6b7075;
+  --colors-neutral-line-7: #c6cacd;
+  --colors-neutral-line-8: #ecedee;
+  --colors-neutral-line-9: #f2f3f4;
+  --colors-neutral-line-10: #f9f9f9;
+  --colors-neutral-line-11: #ffffff;
+  // Semi 全局字体栈
+  --fonts-base-family: 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', 'Segoe UI', 'Helvetica Neue', Helvetica,
+    Arial, sans-serif;
+  --fonts-size-1: 48px;
+  --fonts-size-2: 40px;
+  --fonts-size-3: 32px;
+  --fonts-size-4: 24px;
+  --fonts-size-5: 20px;
+  --fonts-size-6: 16px;
+  --fonts-size-7: 14px;
+  --fonts-size-8: 12px;
+  --fonts-size-9: 12px;
+  --fonts-weight-1: 900;
+  --fonts-weight-2: 800;
+  --fonts-weight-3: 700;
+  --fonts-weight-4: 600;
+  --fonts-weight-5: 500;
+  --fonts-weight-6: 400;
+  --fonts-weight-7: 300;
+  --fonts-weight-8: 200;
+  --fonts-weight-9: 100;
+  // Semi line-height：extra-tight 1.14 / normal 1.43 / relaxed 1.57
+  --fonts-lineHeight-1: 1.14;
+  --fonts-lineHeight-2: 1.43;
+  --fonts-lineHeight-3: 1.57;
+  --borders-style-1: none;
+  --borders-style-2: solid;
+  --borders-style-3: dashed;
+  --borders-style-4: dotted;
+  --borders-width-1: 0px;
+  --borders-width-2: 1px;
+  --borders-width-3: 2px;
+  --borders-width-4: 4px;
+  // Semi 圆角：extra-small/small 3px（button、input、tag）、
+  // medium 6px（dropdown 等菜单）、large 12px（modal）
+  --borders-radius-1: 0px;
+  --borders-radius-2: 3px;
+  --borders-radius-3: 3px;
+  --borders-radius-4: 6px;
+  --borders-radius-5: 12px;
+  --borders-radius-6: 12px;
+  --borders-radius-7: 50%;
+  --sizes-size-0: 0rem;
+  --sizes-size-1: auto;
+  --sizes-size-2: #{px2rem(2px)};
+  --sizes-size-3: #{px2rem(4px)};
+  --sizes-size-4: #{px2rem(6px)};
+  --sizes-size-5: #{px2rem(8px)};
+  --sizes-size-6: #{px2rem(10px)};
+  --sizes-size-7: #{px2rem(12px)};
+  --sizes-size-8: #{px2rem(14px)};
+  --sizes-size-9: #{px2rem(16px)};
+  --sizes-base-1: #{px2rem(2px)};
+  --sizes-base-2: #{px2rem(4px)};
+  --sizes-base-3: #{px2rem(6px)};
+  --sizes-base-4: #{px2rem(8px)};
+  --sizes-base-5: #{px2rem(10px)};
+  --sizes-base-6: #{px2rem(12px)};
+  --sizes-base-7: #{px2rem(14px)};
+  --sizes-base-8: #{px2rem(16px)};
+  --sizes-base-9: #{px2rem(18px)};
+  --sizes-base-10: #{px2rem(20px)};
+  --sizes-base-11: #{px2rem(22px)};
+  --sizes-base-12: #{px2rem(24px)};
+  --sizes-base-13: #{px2rem(26px)};
+  --sizes-base-14: #{px2rem(28px)};
+  --sizes-base-15: #{px2rem(30px)};
+  --sizes-base-16: #{px2rem(32px)};
+  --sizes-base-17: #{px2rem(34px)};
+  --sizes-base-18: #{px2rem(36px)};
+  --sizes-base-19: #{px2rem(38px)};
+  --sizes-base-20: #{px2rem(40px)};
+  --sizes-base-21: #{px2rem(42px)};
+  --sizes-base-22: #{px2rem(44px)};
+  --sizes-base-23: #{px2rem(46px)};
+  --sizes-base-24: #{px2rem(48px)};
+  --sizes-base-25: #{px2rem(50px)};
+  --sizes-base-26: #{px2rem(52px)};
+  --sizes-base-27: #{px2rem(54px)};
+  --sizes-base-28: #{px2rem(56px)};
+  --sizes-base-29: #{px2rem(58px)};
+  --sizes-base-30: #{px2rem(60px)};
+  --sizes-base-31: #{px2rem(62px)};
+  --sizes-base-32: #{px2rem(64px)};
+  --sizes-base-33: #{px2rem(66px)};
+  --sizes-base-34: #{px2rem(68px)};
+  --sizes-base-35: #{px2rem(70px)};
+  --sizes-base-36: #{px2rem(72px)};
+  --sizes-base-37: #{px2rem(74px)};
+  --sizes-base-38: #{px2rem(76px)};
+  --sizes-base-39: #{px2rem(78px)};
+  --sizes-base-40: #{px2rem(80px)};
+  --sizes-base-41: #{px2rem(82px)};
+  --sizes-base-42: #{px2rem(84px)};
+  --sizes-base-43: #{px2rem(86px)};
+  --sizes-base-44: #{px2rem(88px)};
+  --sizes-base-45: #{px2rem(90px)};
+  --sizes-base-46: #{px2rem(92px)};
+  --sizes-base-47: #{px2rem(94px)};
+  --sizes-base-48: #{px2rem(96px)};
+  --sizes-base-49: #{px2rem(98px)};
+  --sizes-base-50: #{px2rem(100px)};
+  // 阴影基于 Semi shadow-elevated（0 0 1px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.1)）
+  --shadows-shadow-none: 0px 0px 0px 0px transparent;
+  --shadows-shadow-sm: 0 0 1px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadows-shadow-normal: 0 0 1px rgba(0, 0, 0, 0.3),
+    0 4px 14px rgba(0, 0, 0, 0.1);
+  --shadows-shadow-md: 0 0 1px rgba(0, 0, 0, 0.3),
+    0 4px 16px rgba(0, 0, 0, 0.12);
+  --shadows-shadow-lg: 0 0 1px rgba(0, 0, 0, 0.3),
+    0 8px 24px rgba(0, 0, 0, 0.16);
+  --shadows-shadow-xl: 0 0 1px rgba(0, 0, 0, 0.3),
+    0 12px 32px rgba(0, 0, 0, 0.2);
+  --shadows-shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+
+  // ===== Semi Design 交互语义覆盖（同 antd 主题在 variables 尾部覆盖的做法） =====
+  // Semi 的 hover 是加深（blue-6），active 更深（blue-7），与 cxd 的「hover 变浅」相反
+  --primary-onHover: var(--colors-brand-4);
+  --success-onHover: var(--colors-success-4);
+  --info-onHover: var(--colors-info-4);
+  --warning-onHover: var(--colors-warning-4);
+  --danger-onHover: var(--colors-error-4);
+  // 组件层按钮 hover 变量直接引用了 brand-6（变浅），这里改为 Semi 的 hover 加深色
+  --button-primary-hover-top-border-color: var(--colors-brand-4);
+  --button-primary-hover-left-border-color: var(--colors-brand-4);
+  --button-primary-hover-right-border-color: var(--colors-brand-4);
+  --button-primary-hover-bottom-border-color: var(--colors-brand-4);
+  --button-primary-hover-bg-color: var(--colors-brand-4);
+  --button-enhance-hover-top-border-color: var(--colors-brand-4);
+  --button-enhance-hover-left-border-color: var(--colors-brand-4);
+  --button-enhance-hover-right-border-color: var(--colors-brand-4);
+  --button-enhance-hover-bottom-border-color: var(--colors-brand-4);
+  --button-enhance-hover-font-color: var(--colors-brand-4);
+  // Semi 弹层阴影 shadow-elevated（toast、modal、popover 等）
+  --boxShadow: 0 0 1px rgba(0, 0, 0, 0.3), 0 4px 14px rgba(0, 0, 0, 0.1);
+  --boxShadowSm: 0 0 1px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --boxTooltipShadow: 0 0 1px rgba(0, 0, 0, 0.3),
+    0 4px 14px rgba(0, 0, 0, 0.1);
+  // ===== Semi 填充式输入框（无边框、浅灰背景；来源 semi-foundation/input/variables.scss） =====
+  // Semi 官方输入框为填充式设计：默认浅灰填充（fill-0）+ 透明边框；
+  // hover 背景加深（fill-1）边框仍透明；focus 背景回浅灰 + 主色边框、无外发光；
+  // 错误态浅红背景（danger-light）。
+  --Form-input-bg: rgba(46, 50, 56, 0.05);
+  --Form-input-borderColor: transparent;
+  --Form-input-onHover-bg: rgba(46, 50, 56, 0.09);
+  --Form-input-onHover-borderColor: transparent;
+  --Form-input-onFocused-bg: rgba(46, 50, 56, 0.05);
+  --Form-input-onFocused-borderColor: var(--colors-brand-5);
+  --Form-input-onFocus-addOnColor: var(--colors-brand-5);
+  --Form-input-onError-bg: var(--colors-error-10);
+  --Form-input-onError-borderColor: var(--colors-error-5);
+  --Form-input-onDisabled-bg: rgba(46, 50, 56, 0.04);
+  --Form-input-onDisabled-borderColor: #e6e8ea;
+  --Form-input-onDisabled-color: rgba(28, 31, 35, 0.35);
+  --Form-input-addOnBg: rgba(46, 50, 56, 0.05);
+  // Select / DatePicker / ResultBox 与输入框同款填充式（复用 Semi input token）
+  --select-base-default-bg-color: rgba(46, 50, 56, 0.05);
+  --select-base-hover-bg-color: rgba(46, 50, 56, 0.09);
+  --inputDate-default-bg-color: rgba(46, 50, 56, 0.05);
+  @each $side in top, right, bottom, left {
+    --select-base-default-#{$side}-border-color: transparent;
+    --select-base-hover-#{$side}-border-color: transparent;
+  }
+  // Semi focus 无外发光，仅边框变色
+  --input-default-active-shadow: none;
+  // 新一代细粒度输入框变量族（_components.scss 定义，绕过 --Form-input-*，需单独对齐）
+  --input-default-default-bg-color: rgba(46, 50, 56, 0.05);
+  --input-default-hover-bg-color: rgba(46, 50, 56, 0.09);
+  --input-default-active-bg-color: rgba(46, 50, 56, 0.05);
+  --input-default-disabled-bg-color: rgba(46, 50, 56, 0.04);
+  @each $side in top, right, bottom, left {
+    // 默认与 hover 边框保持透明（Semi 靠背景灰度表达状态）
+    --input-default-default-#{$side}-border-color: transparent;
+    --input-default-hover-#{$side}-border-color: transparent;
+    // focus（active）边框用主色
+    --input-default-active-#{$side}-border-color: var(--colors-brand-5);
+    // disabled 边框用 grey-1
+    --input-default-disabled-#{$side}-border-color: #e6e8ea;
+  }
+  // Semi 圆角分级：菜单类（dropdown 等）6px（medium）、Modal 12px（large）
+  --DropDown-menu-borderRadius: var(--borderRadiusMd);
+  --Modal-content-borderRadius: var(--borders-radius-5);
+
+  // ===== 其他组件对齐 Semi 官方 token（来源 semi-foundation/*/variables.scss） =====
+  // Switch 开启态为 success 绿（Semi 标志性设计）；关闭态 fill-0 浅灰
+  --switch-default-on-bg-color: var(--colors-success-5);
+  --switch-default-on-hover-bg-color: var(--colors-success-4);
+  --switch-default-off-bg-color: rgba(46, 50, 56, 0.05);
+  --switch-default-off-hover-bg-color: rgba(46, 50, 56, 0.09);
+  // Checkbox 未选中：边框用 text-3（rgba(28,31,35,.35)）
+  @each $side in top, right, bottom, left {
+    --checkbox-default-default-#{$side}-border-color: rgba(28, 31, 35, 0.35);
+  }
+  // Tabs（line 模式）：选中与 hover 文字为深色 text-0，仅指示线用主色
+  --Tabs--line-color: var(--colors-neutral-text-6);
+  --Tabs--line-hover-color: var(--colors-neutral-text-2);
+  --Tabs--line-active-color: var(--colors-neutral-text-2);
+  // Table：表头白底（Semi 表头无灰底），文字 text-2
+  --table-header-bg-color: var(--colors-neutral-fill-11);
+  --table-header-color: var(--colors-neutral-text-6);
+  // Pagination 选中态：主色文字 + primary 浅蓝底 + 无边框
+  --Pagination-onActive-color: var(--colors-brand-5);
+  --Pagination-onActive-backgroundColor: var(--colors-brand-10);
+  --Pagination-onActive-border: var(--borders-width-1) var(--borders-style-1)
+    transparent;
+  // Tooltip：grey-7 深灰底 + 白字
+  --Tooltip-bg: #41464c;
+  --Tooltip--attr-bg: #41464c;
+  --Tooltip-body-color: var(--colors-neutral-text-11);
+  // Progress 进度条默认为 success 绿
+  --Progress-line-theme-color: var(--colors-success-5);
+  // ===== 弹层类对齐（toast/tooltip/popover 圆角 6px，蒙层 overlay rgba(22,22,26,.6)） =====
+  --Toast-borderRadius: var(--borderRadiusMd);
+  // Toast 阴影用 Semi shadow-elevated
+  --Toast-box-shadow: 0 0 1px rgba(0, 0, 0, 0.3), 0 4px 14px rgba(0, 0, 0, 0.1);
+  --Tooltip-borderRadius: var(--borderRadiusMd);
+  --PopOver-borderRadius: var(--borderRadiusMd);
+  --Modal-overlay-bg: rgba(22, 22, 26, 0.6);
+  --Drawer-overlay-bg: rgba(22, 22, 26, 0.6);
+}

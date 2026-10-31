@@ -1787,7 +1787,8 @@
 
   // 对话框
   --dialog-default-border-width: var(--sizes-size-0);
-  --dialog-default-border-radius: var(--sizes-size-4);
+  // 修复圆角引用尺寸族（sizes）的误用，改引用圆角族（值等价 6px）
+  --dialog-default-border-radius: var(--borders-radius-4);
   --dialog-default-padding-y: var(--sizes-base-12);
   --dialog-header-height: var(--sizes-size-1);
   --dialog-icon-icon: '<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" class="icon icon-close"><g id="close" transform="translate(1.439340, 1.439340)" fill="currentColor" fill-rule="nonzero"><polygon points="12.0606602 5.80646642e-14 13.1213203 1.06066017 7.62066017 6.56066017 13.1213203 12.0606602 12.0606602 13.1213203 6.56066017 7.62066017 1.06066017 13.1213203 0 12.0606602 5.49966017 6.56066017 1.72084569e-13 1.06066017 1.06066017 0 6.56066017 5.49966017"></polygon></g></svg>';
@@ -3565,10 +3566,12 @@
   --Toast-paddingBottom: var(--sizes-size-3);
   --Toast-paddingLeft: var(--sizes-size-9);
   --Toast-paddingRight: var(--sizes-size-9);
-  --Toast-top-right-border-radius: var(--borders-radius-3);
-  --Toast-top-left-border-radius: var(--borders-radius-3);
-  --Toast-bottom-right-border-radius: var(--borders-radius-3);
-  --Toast-bottom-left-border-radius: var(--borders-radius-3);
+  // 圆角默认值引用 --Toast-borderRadius，修复二者断链（此前四角变量写死导致
+  // --Toast-borderRadius 覆盖不生效；本改动为等价替换，默认值不变）
+  --Toast-top-right-border-radius: var(--Toast-borderRadius);
+  --Toast-top-left-border-radius: var(--Toast-borderRadius);
+  --Toast-bottom-right-border-radius: var(--Toast-borderRadius);
+  --Toast-bottom-left-border-radius: var(--Toast-borderRadius);
   --Toast-icon-size: var(--sizes-size-9);
 
   --Toast--danger-color: var(--colors-neutral-text-2);

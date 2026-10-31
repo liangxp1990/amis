@@ -1,0 +1,20 @@
+// Semi Design 主题（字节跳动）：https://semi.design
+@import '../properties';
+@import '../components';
+@import './semi-variables';
+@import './common';
+
+// ===== 主题专属规则覆盖（同 dark.scss 追加覆盖块的做法） =====
+// Semi 输入框为填充式：hover 靠背景加深（边框透明），focus 靠主色边框表达。
+// amis 的 yunshe4.0 hover 规则（components/form/_text.scss 末尾）位于 focus 规则之后，
+// 同级特异性下会把 focus 边框盖回 hover 色（透明）；这里用更高特异性保证 focus 主色边框。
+.#{$ns}TextControl.is-focused:not(.is-error) > .#{$ns}TextControl-input {
+  border-color: var(--colors-brand-5);
+}
+
+.#{$ns}TextControl.is-error.is-focused > .#{$ns}TextControl-input {
+  border-color: var(--colors-error-5);
+}
+
+// Semi 输入框 focus 规则见上方说明（PopOver/Tooltip 圆角已改为
+// --PopOver-borderRadius / --Tooltip-borderRadius 变量，在 semi-variables 中覆盖）

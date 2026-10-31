@@ -68,6 +68,11 @@
             theme !== 'antd' ? 'disabled' : ''
           } href="${__uri('amis/lib/themes/antd.css')}" />`
         );
+        document.write(
+          `<link rel="stylesheet" title="semi" ${
+            theme !== 'semi' ? 'disabled' : ''
+          } href="${__uri('amis/lib/themes/semi.css')}" />`
+        );
       } else {
         document.write(
           `<link rel="stylesheet" title="ang" ${

@@ -55,6 +55,11 @@ const themes = [
     value: 'antd'
   },
   {
+    label: '仿 Semi',
+    ns: 'semi-',
+    value: 'semi'
+  },
+  {
     label: 'ang',
     ns: 'a-',
     value: 'ang'

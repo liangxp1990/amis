@@ -20,6 +20,7 @@ import 'amis-ui/lib/locale/de-DE';
 import 'amis-ui/lib/themes/cxd';
 import 'amis-ui/lib/themes/ang';
 import 'amis-ui/lib/themes/antd';
+import 'amis-ui/lib/themes/semi';
 import 'amis-ui/lib/themes/dark';
 
 import 'history';

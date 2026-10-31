@@ -17,6 +17,7 @@ cp ../../node_modules/amis-ui/lib/themes/dark.css lib/themes/dark.css
 cp ../../node_modules/amis-ui/lib/themes/antd.css lib/themes/antd.css
 cp ../../node_modules/amis-ui/lib/themes/cxd.css lib/themes/cxd.css
 cp ../../node_modules/amis-ui/lib/themes/default.css lib/themes/default.css
+cp ../../node_modules/amis-ui/lib/themes/semi.css lib/themes/semi.css
 cp ../../node_modules/amis-ui/lib/helper.css lib/helper.css
 
 # 生成 sdk
@@ -34,6 +35,7 @@ echo ':root { --animation-duration: 0s;}' >>sdk/ie11-patch.css
 cat lib/themes/ang.css | ../../node_modules/.bin/postcss >lib/themes/ang-ie11.css
 cat lib/themes/dark.css | ../../node_modules/.bin/postcss >lib/themes/dark-ie11.css
 cat lib/themes/antd.css | ../../node_modules/.bin/postcss >lib/themes/antd-ie11.css
+cat lib/themes/semi.css | ../../node_modules/.bin/postcss >lib/themes/semi-ie11.css
 cat lib/themes/cxd.css | ../../node_modules/.bin/postcss >lib/themes/cxd-ie11.css
 cp lib/themes/cxd-ie11.css lib/themes/default-ie11.css
 

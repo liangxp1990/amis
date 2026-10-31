@@ -62,6 +62,7 @@ amis.render/embed(schema, props, env)      amis-core/src/index.tsx:379-382
 | 主题 | classPrefix | 内容要点 |
 |---|---|---|
 | cxd.ts（云舍，默认） | `cxd-` | 459 行：toast 组件配置、form/pagination/fieldset/remark/tabs/range-control 等 renderer 默认值（:7-47）+ 整套 ECharts chartTheme 配色（:49-456） |
+| semi.ts（仿 Semi Design，2026-10 新增） | `semi-` | 结构同 cxd.ts（完整 chartTheme + Semi vchart 数据色板）；token 层 `_semi-variables.scss` 用「色板反转映射 + 尾部语义覆盖区」实现 Semi 的 hover 加深/focus 主色/elevated 阴影（组件层 `--button-primary-hover-bg-color` 等绕过语义变量直接引 token，必须逐个覆盖） |
 | antd.ts（仿 Antd） | `antd-` | 45 行：**没有 React 组件覆盖**，只有 classPrefix + 与 cxd 相同的默认 props；视觉差异全靠 scss/themes/_antd-variables.scss 的 token |
 | ang.ts（1.2.2 前默认） | `a-` | 8 行，仅 classPrefix |
 | dark.ts | `dark-` | 16 行：jsonTheme 'eighties'、editor-control 'vs-dark'；样式靠 dark.css（中性色板反转 + 额外覆盖块） |

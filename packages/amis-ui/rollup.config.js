@@ -77,6 +77,7 @@ export default [
       './scss/themes/ang.scss',
       './scss/themes/cxd.scss',
       './scss/themes/dark.scss',
+      './scss/themes/semi.scss',
       './scss/themes/default.scss',
       './scss/helper.scss'
     ]),
@@ -94,7 +95,7 @@ export default [
     external,
     plugins: getPlugins('cjs')
       .concat(
-        ['antd', 'ang', 'cxd', 'dark', 'default'].map(theme =>
+        ['semi', 'antd', 'ang', 'cxd', 'dark', 'default'].map(theme =>
           postcss({
             include: `**/${theme}.scss`,
             // process: processSass,

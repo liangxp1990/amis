@@ -655,6 +655,7 @@ $Table-strip-bg: transparent;
   --PickerColumns-loadingMask-Color: rgba(255, 255, 255, 0.9);
 
   --PopOver-bg: var(--colors-neutral-fill-11);
+  --PopOver-borderRadius: var(--borderRadius);
   --PopOverAble-iconColor: inherit;
   --PopOverAble-onHover-iconColor: inherit;
 
@@ -718,7 +719,8 @@ $Table-strip-bg: transparent;
 
   --Tooltip--attr-bg: rgba(0, 0, 0, 0.7);
   --Tooltip--attr-borderColor: var(--borderColor);
-  --Tooltip--attr-borderRadius: var(--borderRadius);
+  // 统一 Tooltip 圆角来源：主体/标题区/attr 模式同源（默认值等价替换为 radius-3）
+  --Tooltip--attr-borderRadius: var(--Tooltip-borderRadius);
   --Tooltip--attr-borderWidth: 0;
   --Tooltip--attr-boxShadow: var(--shadows-shadow-normal);
   --Tooltip--attr-color: #fff;
@@ -740,7 +742,7 @@ $Table-strip-bg: transparent;
   --Tooltip-body-paddingX: var(--gap-base);
   --Tooltip-body-paddingY: var(--gap-sm);
   --Tooltip-borderColor: var(--borderColor);
-  --Tooltip-borderRadius: var(--borderRadiusLg);
+  --Tooltip-borderRadius: var(--borderRadius);
   --Tooltip-borderWidth: var(--borderWidth);
   --Tooltip-boxShadow: var(--boxTooltipShadow);
   --Tooltip-boxShadow--dark: 0 2px 8px 0 rgba(7, 12, 20, 0.12);

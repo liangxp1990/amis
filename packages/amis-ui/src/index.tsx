@@ -7,6 +7,7 @@ import './locale/de-DE';
 import './themes/cxd';
 import './themes/ang';
 import './themes/antd';
+import './themes/semi';
 import './themes/dark';
 import './themes/default';
 import type {SchemaEditorItemPlaceholder} from './components/schema-editor/Common';
