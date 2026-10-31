@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<!--
+  GitHub Pages SPA fallback：官方文档站路由为 BrowserRouter，
+  直访/刷新子路径时 GitHub Pages 返回本 404 页。
+  此处记录原始路径，跳回首页后由 index.html 注入的脚本恢复路由。
+-->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <script>
+      (function () {
+        try {
+          var p = location.pathname + location.search + location.hash;
+          if (p.indexOf('/amis/') === 0 && p !== '/amis/') {
+            sessionStorage.setItem('amis-docs:redirect', p);
+          }
+        } catch (e) {}
+        location.replace('/amis/');
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>
