@@ -1400,11 +1400,16 @@ export interface APIControlState {
    */
   @autobind
   async initApiSuggest() {
-    const {env, translate: __} = this.props;
+    const {env, enablePickerMode, enableHighlight} = this.props;
+    // 爱速搭 Picker / highlight 模式优先，getApi 联想不启用（spec 第 4 节互斥约定）
+    if (enablePickerMode || enableHighlight) {
+      return;
+    }
     const getApi = getEnv((window as any).editorStore)?.getApi;
     if (!getApi || typeof env?.fetcher !== 'function') {
       return;
     }
+    const {translate: __} = this.props;
     const items = await loadApiItems(
       getApi,
       env.fetcher as any,
@@ -1505,7 +1510,12 @@ export interface APIControlState {
    */
   @autobind
   renderApiSuggest() {
+    const {enablePickerMode, enableHighlight} = this.props;
     const {suggestions, suggestOpened, activeIndex, apiItems} = this.state;
+    // 爱速搭 Picker / highlight 模式优先，不渲染联想下拉（与 initApiSuggest 双重保险）
+    if (enablePickerMode || enableHighlight) {
+      return null;
+    }
     if (!apiItems || !suggestOpened || !suggestions.length) {
       return null;
     }
@@ -1578,7 +1588,7 @@ export interface APIControlState {
                     {this.renderApiSuggest()}
 ```
 
-> 说明：amis-ui 的 `Input` 是原生 input 的受控包装，透传 onFocus/onBlur/onKeyDown；amis-editor 现有爱速搭 Picker（enablePickerMode/highlight）分支不渲染此 Input，两机制天然互斥（spec 第 4 节的优先级声明），无需额外开关判断。
+> 说明：amis-ui 的 `Input` 是原生 input 的受控包装，透传 onFocus/onBlur/onKeyDown。注意 `enablePickerMode` 单独存在时 Input 仍会渲染（只有 `enableHighlight && highlightLabel` 时才被 highlight 标签替换），因此与爱速搭 Picker 的互斥靠 initApiSuggest/renderApiSuggest 开头的 guard 保证（spec 第 4 节：enablePickerMode 优先级高于 getApi 联想）。
 
 - [ ] **Step 9: scss 追加（_api-control.scss）**
 
@@ -1703,14 +1713,30 @@ git commit -m "feat(amis-editor): API 配置控件支持 getApi 联想下拉选�
 ### Task 10: i18n 文案提取
 
 **Files:**
+- Modify: `packages/amis-editor/i18nConfig.js`（ignore 前置）
 - Modify: `packages/amis-editor/src/locale/zh-CN.ts`、`en-US.ts`（由脚本生成）
 
-- [ ] **Step 1: 运行 i18n 提取（Task 9 的 `toast.error(__(msg))` 已包裹文案）**
+> 机制说明：i18n 提取的是**扫描范围内源码的中文字面量**（无需 `__()` 包裹，如 APIControl.tsx 裸写的 '高级设置' 已在哈希表中）；本任务实际被提取的是 `loader.ts` 的 `API_LOAD_FAILED_MSG = '接口列表获取失败'`。命令必须用 amis-editor 的 workspace（根目录无此脚本；amis-editor-core 的 config 扫不到本包文件）。
 
-Run: `npm run i18n:update`
-Expected: 命令成功退出；`git diff packages/amis-editor/src/locale/` 可见 zh-CN.ts 新增 `'接口列表获取失败'` 对应的 md5 哈希行
+- [ ] **Step 1: i18nConfig.js ignore 排除测试目录（防止 __tests__ 中文串污染 locale）**
 
-- [ ] **Step 2: 补英文翻译**
+```js
+// packages/amis-editor/i18nConfig.js 原：
+  ignore: {
+    list: ['src/icons', 'src/locale']
+  },
+// 改为：
+  ignore: {
+    list: ['src/icons', 'src/locale', 'src/**/__tests__']
+  },
+```
+
+- [ ] **Step 2: 运行 i18n 提取**
+
+Run: `npm run i18n:update --workspace amis-editor`
+Expected: 命令成功退出；`git diff packages/amis-editor/src/locale/` 可见 zh-CN.ts 新增 `'接口列表获取失败'` 对应的 md5 哈希行（且**无** `__tests__` 相关的测试用例中文字串混入——若有说明 Step 1 未生效）
+
+- [ ] **Step 3: 补英文翻译**
 
 在 `packages/amis-editor/src/locale/en-US.ts` 中找到新增的哈希行（与 zh-CN.ts 同 key），值改为：
 
@@ -1718,10 +1744,10 @@ Expected: 命令成功退出；`git diff packages/amis-editor/src/locale/` 可�
   '<新哈希>': 'Failed to load API list',
 ```
 
-- [ ] **Step 3: 提交**
+- [ ] **Step 4: 提交**
 
 ```bash
-git add packages/amis-editor/src/locale/
+git add packages/amis-editor/i18nConfig.js packages/amis-editor/src/locale/
 git commit -m "feat(amis-editor): 接口列表加载失败提示 i18n 文案"
 ```
 
@@ -1855,6 +1881,8 @@ const mockOpenApi = {
         }
 ```
 
+> 备注：mock fetcher 会拦截编辑器 demo 的**所有**请求（如 `$schemaUrl`、预览区请求均返回空数据），属预期行为——若手测中面板数据为空/异常，先排查是否为 mock 拦截所致，而非本次改动的问题。
+
 - [ ] **Step 4: 启动并逐项手测**
 
 Run: `npm start`，浏览器访问 `http://127.0.0.1:8888/packages/amis-editor/`
@@ -1890,4 +1918,6 @@ git add -A && git commit -m "fix(amis-editor): getApi 联想手测微调"
 - [ ] apiPicker 35 个单测全绿；typecheck/stylelint 无新增错误
 - [ ] 未配置 getApi：编辑器行为与现状零差异（手测项 1/7）
 - [ ] 配置 getApi：联想选择、入参自动化回填、失败降级全部符合 spec（手测项 2-8）
+- [ ] 与爱速搭 Picker（enablePickerMode/highlight）互斥生效
 - [ ] 文档（editor.md）与 i18n（zh-CN/en-US）齐备
+- [ ] 决策记录：spec 第 5 节预期的 UI 层 jest 测试改为手测清单替代（理由：amis-editor 包零 UI 测试基建、根 jest moduleNameMapper 未映射 amis-editor-core，搭建成本大于收益；核心逻辑已由 apiPicker 纯函数单测覆盖）
