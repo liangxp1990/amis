@@ -21,7 +21,7 @@ import {ModalForm} from './ModalForm';
 import {ContextMenuPanel} from './Panel/ContextMenuPanel';
 import {LeftPanels} from './Panel/LeftPanels';
 import {RightPanels} from './Panel/RightPanels';
-import type {SchemaObject} from 'amis';
+import type {SchemaApi, SchemaObject} from 'amis';
 import type {VariableGroup, VariableOptions} from '../variable';
 import type {EditorNodeType} from '../store/node';
 import {MobileDevTool} from 'amis-ui';
@@ -66,6 +66,13 @@ export interface EditorProps extends PluginEventListener {
    */
   schemaFilter?: (schema: any, isPreview?: boolean) => any;
   amisEnv?: RenderOptions;
+
+  /**
+   * 全局接口选择配置：指向 OpenAPI(3.0/Swagger 2.0) 文档或简单 items 列表的 GET 接口。
+   * 配置后编辑器内 API 配置控件（通用 API/Service 等）支持联想下拉选择接口
+   * 并自动回填真实 API 对象与入参模板；未配置则保持手动输入，行为零变化。
+   */
+  getApi?: SchemaApi;
 
   /**
    * 上下文数据，设置后，面板和脚手架表单里面可以取到这些值。
