@@ -3,7 +3,7 @@ import mergeWith from 'lodash/mergeWith';
 import cloneDeep from 'lodash/cloneDeep';
 import cx from 'classnames';
 import {FormItem, Icon} from 'amis';
-import {Input, PickerContainer, Spinner} from 'amis-ui';
+import {Input, PickerContainer, Spinner, toast} from 'amis-ui';
 
 import {getEnv} from 'mobx-state-tree';
 import {normalizeApi, isEffectiveApi, isApiOutdated} from 'amis-core';
@@ -22,6 +22,10 @@ import type {Api, AMISButtonSchema} from 'amis';
 import type {AMISSchemaCollection, FormControlProps} from 'amis-core';
 import type {ActionSchema} from 'amis';
 import debounce from 'lodash/debounce';
+import {loadApiItems} from './apiPicker/loader';
+import {fuzzyMatchApi} from './apiPicker/matcher';
+import {buildApiFromItem} from './apiPicker/builder';
+import type {ApiItem} from './apiPicker/types';
 
 export type ApiObject = Api & {
   messages?: Record<
@@ -34,6 +38,19 @@ export type ApiObject = Api & {
     string
   >;
 };
+
+/** 联想下拉最多展示条数 */
+const MAX_SUGGESTIONS = 20;
+
+/**
+ * 剥离输入框显示值中的 HTTP method 前缀（transformApi2Str 生成 "POST:/api/x" 形态）。
+ * 注意：只匹配 HTTP 方法名，避免误剥 "http://" 协议头。
+ * Args: value - 输入框当前值
+ * Returns: 剥离后的路径/关键词
+ */
+function stripMethodPrefix(value: string): string {
+  return value.replace(/^(get|post|put|patch|delete|head|options):/i, '');
+}
 
 export interface APIControlProps extends FormControlProps {
   name?: string;
@@ -158,6 +175,14 @@ export interface APIControlState {
   selectedItem?: any[];
   schema?: AMISSchemaCollection;
   loading: boolean;
+  /** 接口列表（getApi 配置且加载成功）；null = 未启用（未配置/失败），降级普通手输 */
+  apiItems: ApiItem[] | null;
+  /** 当前关键词匹配项（截断至 MAX_SUGGESTIONS） */
+  suggestions: ApiItem[];
+  /** 键盘导航激活索引（对应 suggestions 下标），-1 表示无 */
+  activeIndex: number;
+  /** 联想下拉是否展开 */
+  suggestOpened: boolean;
 }
 
 export default class APIControl extends React.Component<
@@ -186,12 +211,43 @@ export default class APIControl extends React.Component<
       apiStr: this.transformApi2Str(props.value),
       selectedItem: [],
       schema: props.pickerSchema,
-      loading: false
+      loading: false,
+      apiItems: null,
+      suggestions: [],
+      activeIndex: -1,
+      suggestOpened: false
     };
   }
 
   componentDidMount() {
     this.updatePickerOptions();
+    this.initApiSuggest();
+  }
+
+  /**
+   * getApi 全局配置存在时拉取接口列表，启用联想下拉。
+   * What: 从 editorStore env 读取 getApi（与读 schemaFilter 同一先例，见 fetchOptions）；
+   *   loadApiItems 内部带模块级缓存/负缓存/toast 全局去重；失败返回 null 自动降级。
+   * Raises: fetcher 异常由 loadApiItems 捕获，不外抛。
+   */
+  @autobind
+  async initApiSuggest() {
+    const {env, enablePickerMode, enableHighlight} = this.props;
+    // 爱速搭 Picker / highlight 模式优先，getApi 联想不启用（spec 第 4 节互斥约定）
+    if (enablePickerMode || enableHighlight) {
+      return;
+    }
+    const getApi = getEnv((window as any).editorStore)?.getApi;
+    if (!getApi || typeof env?.fetcher !== 'function') {
+      return;
+    }
+    const {translate: __} = this.props;
+    const items = await loadApiItems(getApi, env.fetcher as any, msg =>
+      toast.error(__(msg))
+    );
+    if (items) {
+      this.setState({apiItems: items});
+    }
   }
 
   componentDidUpdate(prevProps: APIControlProps) {
@@ -309,7 +365,79 @@ export default class APIControl extends React.Component<
 
   handleSimpleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     this.handleSubmit(e.currentTarget.value, 'input');
+    this.updateSuggestions(e.currentTarget.value);
   };
+
+  /**
+   * 按输入内容更新联想列表（仅启用联想时生效）。
+   * Args: input - 输入框原始值（可能带 method 前缀，匹配前剥离）
+   */
+  @autobind
+  updateSuggestions(input: string) {
+    const {apiItems} = this.state;
+    if (!apiItems) {
+      return;
+    }
+    const suggestions = fuzzyMatchApi(apiItems, stripMethodPrefix(input)).slice(
+      0,
+      MAX_SUGGESTIONS
+    );
+    this.setState({suggestions, activeIndex: -1});
+  }
+
+  /** 聚焦展开下拉（首次聚焦展示全量前 MAX_SUGGESTIONS 项） */
+  @autobind
+  handleSuggestFocus() {
+    const {apiItems, suggestOpened, apiStr} = this.state;
+    if (!apiItems) {
+      return;
+    }
+    if (!suggestOpened) {
+      this.updateSuggestions(apiStr);
+    }
+    this.setState({suggestOpened: true});
+  }
+
+  @autobind
+  handleSuggestBlur() {
+    this.setState({suggestOpened: false});
+  }
+
+  /**
+   * 联想下拉键盘导航：↓↑ 移动高亮、Enter 选中（仅 activeIndex >= 0 时拦截回车，
+   * 不影响手输回车）、Esc 收起。
+   */
+  @autobind
+  handleSuggestKeyDown(e: React.KeyboardEvent) {
+    const {suggestions, activeIndex, suggestOpened} = this.state;
+    if (!suggestOpened || !suggestions.length) {
+      return;
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      this.setState({activeIndex: (activeIndex + 1) % suggestions.length});
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      this.setState({
+        activeIndex: (activeIndex - 1 + suggestions.length) % suggestions.length
+      });
+    } else if (e.key === 'Enter' && activeIndex >= 0) {
+      e.preventDefault();
+      this.pickApiItem(suggestions[activeIndex]);
+    } else if (e.key === 'Escape') {
+      this.setState({suggestOpened: false});
+    }
+  }
+
+  /**
+   * 选中接口项：buildApiFromItem 自动生成 api 对象（url 占位/入参模板），
+   * 复用 handleSubmit 与现有 value 合并（data/headers 整替换、adaptor 等保留）。
+   */
+  @autobind
+  pickApiItem(item: ApiItem) {
+    this.handleSubmit(buildApiFromItem(item) as SchemaApi, 'input');
+    this.setState({suggestOpened: false, activeIndex: -1});
+  }
 
   @autobind
   handleSubmit(values: SchemaApi, action?: 'input' | 'picker-submit') {
@@ -495,6 +623,77 @@ export default class APIControl extends React.Component<
           )
         }
       </PickerContainer>
+    );
+  }
+
+  /**
+   * 联想下拉层：按 tags[0] 分组（无 tags 平铺不显示组标题），保持 fuzzyMatch 排序；
+   * 每项 = method 徽标 + 名称 + 路径。
+   */
+  @autobind
+  renderApiSuggest() {
+    const {enablePickerMode, enableHighlight} = this.props;
+    const {suggestions, suggestOpened, activeIndex, apiItems} = this.state;
+    // 爱速搭 Picker / highlight 模式优先，不渲染联想下拉（与 initApiSuggest 双重保险）
+    if (enablePickerMode || enableHighlight) {
+      return null;
+    }
+    if (!apiItems || !suggestOpened || !suggestions.length) {
+      return null;
+    }
+
+    const groups: Array<{tag: string; items: ApiItem[]}> = [];
+    suggestions.forEach(item => {
+      const tag = item.tags?.[0] || '';
+      let group = groups.find(g => g.tag === tag);
+      if (!group) {
+        group = {tag, items: []};
+        groups.push(group);
+      }
+      group.items.push(item);
+    });
+
+    return (
+      <div className="ae-ApiControl-suggest" key="api-suggest">
+        {groups.map(group => (
+          <div
+            className="ae-ApiControl-suggest-group"
+            key={group.tag || 'default'}
+          >
+            {group.tag ? (
+              <div className="ae-ApiControl-suggest-groupTitle">
+                {group.tag}
+              </div>
+            ) : null}
+            {group.items.map((item, idx) => (
+              <div
+                key={`${item.method}-${item.path}-${idx}`}
+                className={cx('ae-ApiControl-suggest-item', {
+                  'is-active': suggestions.indexOf(item) === activeIndex
+                })}
+                /* 阻止 mousedown 抢焦点导致 Input 先 blur 收起下拉 */
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => this.pickApiItem(item)}
+              >
+                <span
+                  className={cx(
+                    'ae-ApiControl-suggest-method',
+                    `is-${item.method}`
+                  )}
+                >
+                  {item.method.toUpperCase()}
+                </span>
+                <span className="ae-ApiControl-suggest-name" title={item.name}>
+                  {item.name}
+                </span>
+                <span className="ae-ApiControl-suggest-path" title={item.path}>
+                  {item.path}
+                </span>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
     );
   }
 
@@ -1033,14 +1232,20 @@ export default class APIControl extends React.Component<
                       )}
                     </div>
                   ) : (
-                    <Input
-                      ref={this.inputRef}
-                      value={apiStr}
-                      type="text"
-                      disabled={disabled}
-                      placeholder="http://"
-                      onChange={this.handleSimpleInputChange}
-                    />
+                    <>
+                      <Input
+                        ref={this.inputRef}
+                        value={apiStr}
+                        type="text"
+                        disabled={disabled}
+                        placeholder="http://"
+                        onChange={this.handleSimpleInputChange}
+                        onFocus={this.handleSuggestFocus}
+                        onBlur={this.handleSuggestBlur}
+                        onKeyDown={this.handleSuggestKeyDown}
+                      />
+                      {this.renderApiSuggest()}
+                    </>
                   )}
                   {enablePickerMode ? this.renderPickerSchema() : null}
                 </div>

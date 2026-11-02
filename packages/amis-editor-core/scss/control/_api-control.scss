@@ -20,6 +20,7 @@
     align-items: stretch;
 
     .ae-ApiControl-input {
+      position: relative; /* 联想下拉定位上下文 */
       background: var(--Form-input-bg);
       border: var(--Form-input-borderWidth) solid var(--Form-input-borderColor);
       border-radius: var(--Form-input-borderRadius);
@@ -74,6 +75,95 @@
       text-overflow: ellipsis;
       white-space: nowrap;
       max-width: 90%;
+    }
+  }
+
+  &-suggest {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 30;
+    max-height: 280px;
+    overflow-y: auto;
+    background: var(--background, #fff);
+    border: 1px solid var(--borderColor);
+    border-radius: var(--borderRadius);
+    box-shadow: var(--boxShadow, 0 4px 12px rgba(0, 0, 0, 0.15));
+
+    &-group {
+      &:not(:first-child) {
+        border-top: 1px solid var(--borderColor);
+      }
+    }
+
+    &-groupTitle {
+      padding: 4px 8px;
+      font-size: 12px;
+      color: var(--text--muted-color, #84868c);
+      background: var(--colors-neutral-2, #f7f7f9);
+    }
+
+    &-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 8px;
+      cursor: pointer;
+      font-size: 12px;
+
+      &:hover,
+      &.is-active {
+        background: rgba(0, 0, 0, 0.05);
+      }
+    }
+
+    &-method {
+      flex: none;
+      padding: 0 4px;
+      border-radius: 3px;
+      font-size: 11px;
+      line-height: 18px;
+      color: #fff;
+      background: var(--info, #108cee);
+
+      &.is-get {
+        background: var(--success, #5fb333);
+      }
+
+      &.is-post {
+        background: var(--info, #108cee);
+      }
+
+      &.is-put {
+        background: var(--warning, #f39000);
+      }
+
+      &.is-delete {
+        background: var(--danger, #d0021b);
+      }
+
+      &.is-patch {
+        background: var(--info, #108cee);
+      }
+    }
+
+    &-name {
+      flex: none;
+      max-width: 45%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text-color);
+    }
+
+    &-path {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-align: right;
+      color: var(--text--muted-color, #84868c);
     }
   }
 
