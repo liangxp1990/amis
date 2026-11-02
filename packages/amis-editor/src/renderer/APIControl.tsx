@@ -238,7 +238,9 @@ export default class APIControl extends React.Component<
     if (enablePickerMode || enableHighlight) {
       return;
     }
-    const getApi = getEnv((window as any).editorStore)?.getApi;
+    // MST getEnv 对非树节点会抛 assertIsStateTreeNode，先判 store 存在再取 env
+    const store = (window as any).editorStore;
+    const getApi = store ? getEnv(store)?.getApi : undefined;
     if (!getApi || typeof env?.fetcher !== 'function') {
       return;
     }
