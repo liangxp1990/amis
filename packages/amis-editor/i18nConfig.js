@@ -6,7 +6,7 @@ module.exports = {
     test: /.*(ts|tsx|js|jsx)$/
   },
   ignore: {
-    list: ['src/icons', 'src/locale']
+    list: ['src/icons', 'src/locale', 'src/**/__tests__']
   },
   importInfo: {
     source: 'i18n-runtime',
