@@ -80,13 +80,17 @@ flowchart LR
 
 ### 3.2 数据源解析与格式探测
 
-拉取响应后自动探测格式，宿主无需声明：
+拉取响应后自动探测格式，宿主无需声明。
 
-| 探测条件 | 解析器 | 接口项来源 |
+**探测输入契约**：不同宿主的 `env.fetcher` 解包行为不同（仓库默认 fetcher 直接返回 axios response，裸 OpenAPI 文档落在 `res.data`；按 amis 协议解包的宿主 fetcher 则文档落在 `res.data.data`）。因此探测函数对 `res.data` 与 `res.data.data` **两层都检查**，任一层命中即采用：
+
+| 探测条件（两层任一命中） | 解析器 | 接口项来源 |
 |---|---|---|
-| 响应含 `openapi` 字段（3.x） | OpenAPI 3.0 解析器 | 遍历 `paths`，每个 path × method 为一项 |
-| 响应含 `swagger` 字段（2.0） | Swagger 2.0 解析器 | 同上；`definitions` / `in: body` 参数差异兼容 |
-| 其他（含 `data.items`） | 简单列表解析器 | `data.items: [{name, method, url, ...api定义}]`，`...` 中的 `data`/`headers` 等字段选中时透传 |
+| 含 `openapi` 字段（3.x） | OpenAPI 3.0 解析器 | 遍历 `paths`，每个 path × method 为一项 |
+| 含 `swagger` 字段（2.0） | Swagger 2.0 解析器 | 同上；`definitions` / `in: body` 参数差异兼容 |
+| 含 `items` 数组 | 简单列表解析器 | `items: [{name, method, url, ...api定义}]`，`...` 中的 `data`/`headers` 等字段选中时透传 |
+
+**响应非法**定义：两层均未命中任何已知结构（无 `openapi`/`swagger`/`items`），视为拉取失败，走 3.3 降级路径。
 
 **统一内部模型**（解析器输出）：
 
@@ -131,21 +135,23 @@ interface ApiParam {
 **未配置 getApi / 拉取失败**：
 
 - 未配置：代码路径不变，无任何视觉差异
-- 拉取失败或响应非法：toast 提示一次"接口列表获取失败"，控件降级为普通手输，不阻塞配置
+- 拉取失败或响应非法（见 3.2 定义）：**失败结果同样写入模块级缓存（负缓存）**，编辑器会话内不再自动重试（避免多实例反复请求）；toast 提示"接口列表获取失败"**全局去重只弹一次**；控件降级为普通手输，不阻塞配置；高级设置弹窗不受影响
 
 ### 3.4 入参自动化生成规则
 
 选中 `ApiItem` 后生成回填的 api 对象：
 
+**url 前缀拼接规则**：OpenAPI 3 取 `servers[0].url`、Swagger 2 取 `basePath` 作为前缀（缺省为空串），拼接在 path 之前。前缀为相对路径（如 `/api`）直接拼接；为绝对 URL（`http://…`）时拼接完整 URL，回填后用户可在输入框/高级设置中自行改写。示例：`basePath: '/api'` + path `/user/{id}` → `/api/user/${id}`。
+
 | OpenAPI 定义 | 生成规则 | 示例 |
 |---|---|---|
-| path 参数（`/user/{id}`） | url 占位符替换 | `url: '/api/user/${id}'` |
+| path 参数（`/user/{id}`） | url 占位符替换 | `url: '/api/user/${id}'`（`/api` 来自 basePath/servers 拼接） |
 | query 参数 | `data` 映射（amis 的 GET 请求自动将 data 序列化为 query） | `data: {pageNum: '${pageNum}'}` |
 | requestBody 属性 | `data` 映射，嵌套对象保留结构 | `data: {name: '${name}', role: '${role}'}` |
 | 简单列表项的 `data`/`headers` 等字段 | 原样透传 | — |
 
 - 占位符统一为 `${参数名}`：与页面数据域同名变量直接生效；无同名变量时值为 undefined，用户后续自行绑定（第一期不做参数绑定面板）
-- 生成结果与现有 value 合并沿用 `handleSubmit` 的 `mergeWith` 逻辑（保留用户已配置的高级字段）
+- 生成结果与现有 value 合并沿用 `handleSubmit` 的 `mergeWith` 逻辑：`adaptor`/`sendOn` 等普通字段保留用户已配置值；`data`/`responseData`/`headers` 按 existing customizer 为**整体替换**（换接口场景下旧接口的请求体/请求头不应残留，属预期行为）
 
 ### 3.5 改动文件清单
 
@@ -154,8 +160,8 @@ interface ApiParam {
 | `packages/amis-editor-core/src/component/Editor.tsx` | `EditorProps` 新增 `getApi?: SchemaApi` |
 | `packages/amis-editor/src/renderer/APIControl.tsx` | 联想下拉 UI 与交互、缓存、选中回填 |
 | `packages/amis-editor/src/renderer/apiPicker/`（新增） | 数据源拉取与缓存、格式探测、OpenAPI 3.0/2.0 解析器、简单列表解析器、入参自动化生成器（纯函数，独立可测） |
-| `packages/amis-editor/src/locale/zh-CN.ts` 等 | 失败提示等文案 |
-| `docs/zh-CN/extend/editor/…`（或编辑器接入文档） | getApi 配置说明 |
+| `packages/amis-editor/src/locale/zh-CN.ts`、`en-US.ts` | 失败提示等文案（按仓库约定用 `npm run i18n:update` 同步维护） |
+| `docs/zh-CN/extend/editor.md` | getApi 配置说明 |
 
 ## 4. 兼容性
 
@@ -165,13 +171,15 @@ interface ApiParam {
 
 ## 5. 测试计划
 
-解析器为纯函数，重点单测（`packages/amis-editor/src/__tests__` 或 renderer 同级）：
+解析器为纯函数，重点单测（`packages/amis-editor/src/__tests__` 或 renderer 同级，`*.test.ts` 命名）：
 
-1. **格式探测**：OpenAPI 3.0 / Swagger 2.0 / 简单 items 三种响应正确路由
-2. **OpenAPI 解析**：paths 展开、summary/operationId 兜底命名、tags 分组、$ref 递归、环引用不栈溢出、enum/required 提取
-3. **入参生成**：path 占位替换、query→data、body 属性→data（嵌套结构保留）、简单列表字段透传
-4. **联想交互**：模糊匹配（名称/路径/大小写）、选中回填值形态、与已有 value 的合并
-5. **缓存**：多个 APIControl 实例共享一次请求
+> **测试前置说明**：amis-editor 包自身无 jest 配置（test script 为占位），根 jest 的 `testRegex` 可直接拾取本包测试文件。纯解析器/生成器测试仅依赖 ts，无障碍；**控件层（UI）测试**会 import `amis-editor-core`，根 jest 的 moduleNameMapper 未映射该包（会解析到构建产物），需先 `npm run build` 或在根 jest 配置补 mapper 条目——计划中作为前置任务处理。
+
+1. **格式探测**：OpenAPI 3.0 / Swagger 2.0 / 简单 items 三种响应正确路由；两层探测（裸文档在 `res.data` 与解包后在 `res.data.data`）均命中；两层均无已知结构判为非法
+2. **OpenAPI 解析**：paths 展开、summary/operationId 兜底命名、tags 分组、$ref 递归、环引用不栈溢出、enum/required 提取、servers/basePath 前缀提取
+3. **入参生成**：path 占位替换、url 前缀拼接（相对前缀/绝对 URL/缺省）、query→data、body 属性→data（嵌套结构保留）、简单列表字段透传
+4. **联想交互**：模糊匹配（名称/路径/大小写）、选中回填值形态、与已有 value 的合并（adaptor 保留、data/headers 整替换）
+5. **缓存**：多个 APIControl 实例共享一次请求；失败负缓存（会话内不重试）；toast 全局一次
 6. **降级**：getApi 失败后手输不受影响
 7. **回归**：未配置 getApi 时现有用例/快照全绿
 
