@@ -1085,7 +1085,7 @@ describe('apiPicker: loadApiItems', () => {
     expect(await loadApiItems('/bad', fetcher, notify)).toBeNull();
     expect(calls).toBe(1);
     expect(notify).toHaveBeenCalledTimes(1);
-    expect(notify).toHaveBeenCalledWith('apiControl.loadFailed');
+    expect(notify).toHaveBeenCalledWith('接口列表获取失败');
   });
 
   it('响应非法（未知结构）：返回 null 且计入负缓存', async () => {
@@ -1144,8 +1144,8 @@ import type {ApiItem} from './types';
  */
 export type ApiFetcher = (api: any, ctx?: any) => Promise<any>;
 
-/** 失败提示的 i18n key（由 UI 层翻译后 toast） */
-export const API_LOAD_FAILED_KEY = 'apiControl.loadFailed';
+/** 失败提示原始文案（UI 层用 __() 翻译后 toast；文案由 npm run i18n:update 自动提取进 locale 哈希表） */
+export const API_LOAD_FAILED_MSG = '接口列表获取失败';
 
 /**
  * 模块级缓存：存 Promise 而非结果——既缓存成功/失败（负缓存），
@@ -1181,13 +1181,13 @@ export function resetApiCache(): void {
  *   （并发调用共享同一次请求）；失败结果 resolve 为 null 且同样缓存
  *   （负缓存，编辑器会话内不再重试）。
  * Args: getApi - 全局配置（SchemaApi）; fetcher - env.fetcher;
- *   notify - 失败提示回调（入参为 i18n key，全局去重一次）
+ *   notify - 失败提示回调（入参为原始中文文案，UI 层翻译后 toast，全局去重一次）
  * Returns: 接口列表；失败/非法响应返回 null（调用方降级为普通手输）
  */
 export function loadApiItems(
   getApi: any,
   fetcher: ApiFetcher,
-  notify?: (key: string) => void
+  notify?: (msg: string) => void
 ): Promise<ApiItem[] | null> {
   const key = cacheKey(getApi);
   let cached = cache.get(key);
@@ -1202,7 +1202,7 @@ export function loadApiItems(
 async function doLoad(
   getApi: any,
   fetcher: ApiFetcher,
-  notify?: (key: string) => void
+  notify?: (msg: string) => void
 ): Promise<ApiItem[] | null> {
   let result: ApiItem[] | null = null;
   try {
@@ -1214,7 +1214,7 @@ async function doLoad(
 
   if (!result && !failureNotified) {
     failureNotified = true;
-    notify?.(API_LOAD_FAILED_KEY);
+    notify?.(API_LOAD_FAILED_MSG);
   }
   return result;
 }
@@ -1265,3 +1265,629 @@ Run: `npm run typecheck`
 Expected: 无新增错误（基线：分支起点 typecheck 已通过）
 
 ---
+
+## Chunk 2: 类型声明 / 联想 UI / i18n / 文档 / 回归（Task 8-12）
+
+### Task 8: EditorProps.getApi 类型声明
+
+**Files:**
+- Modify: `packages/amis-editor-core/src/component/Editor.tsx:24`（import type 行）
+- Modify: `packages/amis-editor-core/src/component/Editor.tsx:31-163`（EditorProps 接口）
+
+> 纯类型声明任务，无运行时代码、无单测：`EditorManagerConfig = Omit<EditorProps, 'value'|'onChange'>`（manager.ts:88）使新字段自动进入 config；Editor 构造函数 `...rest` 展开（Editor.tsx:194）自动随 `MainStore.create(_, config)` 下发；读取端 `getEnv(window.editorStore).getApi` 即可取到（与 APIControl.tsx:265 读 schemaFilter 同一机制）。端到端正确性由 Task 12 手测覆盖。
+
+- [ ] **Step 1: 修改 import type 行**
+
+```ts
+// Editor.tsx:24 原：
+import type {SchemaObject} from 'amis';
+// 改为：
+import type {SchemaApi, SchemaObject} from 'amis';
+```
+
+- [ ] **Step 2: EditorProps 接口新增字段（插在 `amisEnv?: RenderOptions;` 之后）**
+
+```ts
+  amisEnv?: RenderOptions;
+
+  /**
+   * 全局接口选择配置：指向 OpenAPI(3.0/Swagger 2.0) 文档或简单 items 列表的 GET 接口。
+   * 配置后编辑器内 API 配置控件（通用 API/Service 等）支持联想下拉选择接口
+   * 并自动回填真实 API 对象与入参模板；未配置则保持手动输入，行为零变化。
+   */
+  getApi?: SchemaApi;
+```
+
+- [ ] **Step 3: 类型检查**
+
+Run: `npm run typecheck`
+Expected: 无新增错误
+
+- [ ] **Step 4: 提交**
+
+```bash
+git add packages/amis-editor-core/src/component/Editor.tsx
+git commit -m "feat(amis-editor-core): EditorProps 新增 getApi 全局接口选择配置"
+```
+
+---
+
+### Task 9: APIControl 联想下拉 UI
+
+**Files:**
+- Modify: `packages/amis-editor/src/renderer/APIControl.tsx`
+- Modify: `packages/amis-editor-core/scss/control/_api-control.scss`
+
+> 本任务不写 UI 自动化测试，理由：amis-editor 包内零 UI 测试基建（无 jest 配置/无 enzyme 或 testing-library 先例），且根 jest moduleNameMapper 未映射 amis-editor-core，搭建成本大于收益。核心逻辑（匹配/生成/缓存/探测）已在 Chunk 1 纯函数全覆盖；交互正确性由 typecheck + Task 12 手测清单验证。
+
+- [ ] **Step 1: 改 import 区（三处）**
+
+```ts
+// 1. amis-ui import 加 toast（原：import {Input, PickerContainer, Spinner} from 'amis-ui';）
+import {Input, PickerContainer, Spinner, toast} from 'amis-ui';
+
+// 2. 文件尾部 import 区（debounce import 之后）新增：
+import {loadApiItems} from './apiPicker/loader';
+import {fuzzyMatchApi} from './apiPicker/matcher';
+import {buildApiFromItem} from './apiPicker/builder';
+import type {ApiItem} from './apiPicker/types';
+```
+
+- [ ] **Step 2: class 外新增常量与工具函数（放在 APIControlProps 接口之前）**
+
+```ts
+/** 联想下拉最多展示条数 */
+const MAX_SUGGESTIONS = 20;
+
+/**
+ * 剥离输入框显示值中的 HTTP method 前缀（transformApi2Str 生成 "POST:/api/x" 形态）。
+ * 注意：只匹配 HTTP 方法名，避免误剥 "http://" 协议头。
+ * Args: value - 输入框当前值
+ * Returns: 剥离后的路径/关键词
+ */
+function stripMethodPrefix(value: string): string {
+  return value.replace(/^(get|post|put|patch|delete|head|options):/i, '');
+}
+```
+
+- [ ] **Step 3: 扩展 APIControlState（替换整个接口）**
+
+```ts
+export interface APIControlState {
+  apiStr: string;
+  selectedItem?: any[];
+  schema?: AMISSchemaCollection;
+  loading: boolean;
+  /** 接口列表（getApi 配置且加载成功）；null = 未启用（未配置/失败），降级普通手输 */
+  apiItems: ApiItem[] | null;
+  /** 当前关键词匹配项（截断至 MAX_SUGGESTIONS） */
+  suggestions: ApiItem[];
+  /** 键盘导航激活索引（对应 suggestions 下标），-1 表示无 */
+  activeIndex: number;
+  /** 联想下拉是否展开 */
+  suggestOpened: boolean;
+}
+```
+
+- [ ] **Step 4: constructor state 初始值补 4 个字段**
+
+```ts
+    this.state = {
+      apiStr: this.transformApi2Str(props.value),
+      selectedItem: [],
+      schema: props.pickerSchema,
+      loading: false,
+      apiItems: null,
+      suggestions: [],
+      activeIndex: -1,
+      suggestOpened: false
+    };
+```
+
+- [ ] **Step 5: componentDidMount 挂载初始化 + 新增方法**
+
+```ts
+  componentDidMount() {
+    this.updatePickerOptions();
+    this.initApiSuggest();
+  }
+
+  /**
+   * getApi 全局配置存在时拉取接口列表，启用联想下拉。
+   * What: 从 editorStore env 读取 getApi（与读 schemaFilter 同一先例，见 fetchOptions）；
+   *   loadApiItems 内部带模块级缓存/负缓存/toast 全局去重；失败返回 null 自动降级。
+   * Raises: fetcher 异常由 loadApiItems 捕获，不外抛。
+   */
+  @autobind
+  async initApiSuggest() {
+    const {env, translate: __} = this.props;
+    const getApi = getEnv((window as any).editorStore)?.getApi;
+    if (!getApi || typeof env?.fetcher !== 'function') {
+      return;
+    }
+    const items = await loadApiItems(
+      getApi,
+      env.fetcher as any,
+      msg => toast.error(__(msg))
+    );
+    if (items) {
+      this.setState({apiItems: items});
+    }
+  }
+```
+
+- [ ] **Step 6: 输入/焦点/键盘/选中方法（handleSimpleInputChange 替换 + 新增 4 个方法，放在 clearPickerValue 之后）**
+
+```ts
+  handleSimpleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    this.handleSubmit(e.currentTarget.value, 'input');
+    this.updateSuggestions(e.currentTarget.value);
+  };
+
+  /**
+   * 按输入内容更新联想列表（仅启用联想时生效）。
+   * Args: input - 输入框原始值（可能带 method 前缀，匹配前剥离）
+   */
+  @autobind
+  updateSuggestions(input: string) {
+    const {apiItems} = this.state;
+    if (!apiItems) {
+      return;
+    }
+    const suggestions = fuzzyMatchApi(apiItems, stripMethodPrefix(input)).slice(
+      0,
+      MAX_SUGGESTIONS
+    );
+    this.setState({suggestions, activeIndex: -1});
+  }
+
+  /** 聚焦展开下拉（首次聚焦展示全量前 MAX_SUGGESTIONS 项） */
+  @autobind
+  handleSuggestFocus() {
+    const {apiItems, suggestOpened, apiStr} = this.state;
+    if (!apiItems) {
+      return;
+    }
+    if (!suggestOpened) {
+      this.updateSuggestions(apiStr);
+    }
+    this.setState({suggestOpened: true});
+  }
+
+  @autobind
+  handleSuggestBlur() {
+    this.setState({suggestOpened: false});
+  }
+
+  /**
+   * 联想下拉键盘导航：↓↑ 移动高亮、Enter 选中（仅 activeIndex >= 0 时拦截回车，
+   * 不影响手输回车）、Esc 收起。
+   */
+  @autobind
+  handleSuggestKeyDown(e: React.KeyboardEvent) {
+    const {suggestions, activeIndex, suggestOpened} = this.state;
+    if (!suggestOpened || !suggestions.length) {
+      return;
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      this.setState({activeIndex: (activeIndex + 1) % suggestions.length});
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      this.setState({
+        activeIndex: (activeIndex - 1 + suggestions.length) % suggestions.length
+      });
+    } else if (e.key === 'Enter' && activeIndex >= 0) {
+      e.preventDefault();
+      this.pickApiItem(suggestions[activeIndex]);
+    } else if (e.key === 'Escape') {
+      this.setState({suggestOpened: false});
+    }
+  }
+
+  /**
+   * 选中接口项：buildApiFromItem 自动生成 api 对象（url 占位/入参模板），
+   * 复用 handleSubmit 与现有 value 合并（data/headers 整替换、adaptor 等保留）。
+   */
+  @autobind
+  pickApiItem(item: ApiItem) {
+    this.handleSubmit(buildApiFromItem(item) as SchemaApi, 'input');
+    this.setState({suggestOpened: false, activeIndex: -1});
+  }
+```
+
+- [ ] **Step 7: 联想下拉渲染方法（新增，放在 renderApiDialog 之前）**
+
+```tsx
+  /**
+   * 联想下拉层：按 tags[0] 分组（无 tags 平铺不显示组标题），保持 fuzzyMatch 排序；
+   * 每项 = method 徽标 + 名称 + 路径。
+   */
+  @autobind
+  renderApiSuggest() {
+    const {suggestions, suggestOpened, activeIndex, apiItems} = this.state;
+    if (!apiItems || !suggestOpened || !suggestions.length) {
+      return null;
+    }
+
+    const groups: Array<{tag: string; items: ApiItem[]}> = [];
+    suggestions.forEach(item => {
+      const tag = item.tags?.[0] || '';
+      let group = groups.find(g => g.tag === tag);
+      if (!group) {
+        group = {tag, items: []};
+        groups.push(group);
+      }
+      group.items.push(item);
+    });
+
+    return (
+      <div className="ae-ApiControl-suggest" key="api-suggest">
+        {groups.map(group => (
+          <div className="ae-ApiControl-suggest-group" key={group.tag || 'default'}>
+            {group.tag ? (
+              <div className="ae-ApiControl-suggest-groupTitle">{group.tag}</div>
+            ) : null}
+            {group.items.map((item, idx) => (
+              <div
+                key={`${item.method}-${item.path}-${idx}`}
+                className={cx('ae-ApiControl-suggest-item', {
+                  'is-active': suggestions.indexOf(item) === activeIndex
+                })}
+                /* 阻止 mousedown 抢焦点导致 Input 先 blur 收起下拉 */
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => this.pickApiItem(item)}
+              >
+                <span
+                  className={cx(
+                    'ae-ApiControl-suggest-method',
+                    `is-${item.method}`
+                  )}
+                >
+                  {item.method.toUpperCase()}
+                </span>
+                <span className="ae-ApiControl-suggest-name" title={item.name}>
+                  {item.name}
+                </span>
+                <span className="ae-ApiControl-suggest-path" title={item.path}>
+                  {item.path}
+                </span>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    );
+  }
+```
+
+- [ ] **Step 8: render() 中 Input 挂事件 + 渲染下拉层（替换现有 `<Input ... />` 块）**
+
+```tsx
+                    <Input
+                      ref={this.inputRef}
+                      value={apiStr}
+                      type="text"
+                      disabled={disabled}
+                      placeholder="http://"
+                      onChange={this.handleSimpleInputChange}
+                      onFocus={this.handleSuggestFocus}
+                      onBlur={this.handleSuggestBlur}
+                      onKeyDown={this.handleSuggestKeyDown}
+                    />
+                    {this.renderApiSuggest()}
+```
+
+> 说明：amis-ui 的 `Input` 是原生 input 的受控包装，透传 onFocus/onBlur/onKeyDown；amis-editor 现有爱速搭 Picker（enablePickerMode/highlight）分支不渲染此 Input，两机制天然互斥（spec 第 4 节的优先级声明），无需额外开关判断。
+
+- [ ] **Step 9: scss 追加（_api-control.scss）**
+
+`.ae-ApiControl-input` 规则块内（现有 `& > input` 之前）加定位上下文：
+
+```scss
+      .ae-ApiControl-input {
+        position: relative; /* 联想下拉定位上下文 */
+        // ...现有属性保持不变
+```
+
+`.ae-ApiControl` 嵌套内（`&-highlight` 块之后）追加：
+
+```scss
+  &-suggest {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 30;
+    max-height: 280px;
+    overflow-y: auto;
+    background: var(--background, #fff);
+    border: 1px solid var(--borderColor);
+    border-radius: var(--borderRadius);
+    box-shadow: var(--boxShadow, 0 4px 12px rgba(0, 0, 0, 0.15));
+
+    &-group {
+      &:not(:first-child) {
+        border-top: 1px solid var(--borderColor);
+      }
+    }
+
+    &-groupTitle {
+      padding: 4px 8px;
+      font-size: 12px;
+      color: var(--text--muted-color, #84868c);
+      background: var(--colors-neutral-2, #f7f7f9);
+    }
+
+    &-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 8px;
+      cursor: pointer;
+      font-size: 12px;
+
+      &:hover,
+      &.is-active {
+        background: rgba(0, 0, 0, 0.05);
+      }
+    }
+
+    &-method {
+      flex: none;
+      padding: 0 4px;
+      border-radius: 3px;
+      font-size: 11px;
+      line-height: 18px;
+      color: #fff;
+      background: var(--info, #108cee);
+
+      &.is-get {
+        background: var(--success, #5fb333);
+      }
+
+      &.is-post {
+        background: var(--info, #108cee);
+      }
+
+      &.is-put {
+        background: var(--warning, #f39000);
+      }
+
+      &.is-delete {
+        background: var(--danger, #d0021b);
+      }
+
+      &.is-patch {
+        background: var(--info, #108cee);
+      }
+    }
+
+    &-name {
+      flex: none;
+      max-width: 45%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text-color);
+    }
+
+    &-path {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-align: right;
+      color: var(--text--muted-color, #84868c);
+    }
+  }
+```
+
+- [ ] **Step 10: 类型与样式检查**
+
+Run: `npm run typecheck`
+Expected: 无新增错误
+
+Run: `npm run stylelint`
+Expected: 无新增错误
+
+- [ ] **Step 11: 提交**
+
+```bash
+git add packages/amis-editor/src/renderer/APIControl.tsx packages/amis-editor-core/scss/control/_api-control.scss
+git commit -m "feat(amis-editor): API 配置控件支持 getApi 联想下拉选择"
+```
+
+---
+
+### Task 10: i18n 文案提取
+
+**Files:**
+- Modify: `packages/amis-editor/src/locale/zh-CN.ts`、`en-US.ts`（由脚本生成）
+
+- [ ] **Step 1: 运行 i18n 提取（Task 9 的 `toast.error(__(msg))` 已包裹文案）**
+
+Run: `npm run i18n:update`
+Expected: 命令成功退出；`git diff packages/amis-editor/src/locale/` 可见 zh-CN.ts 新增 `'接口列表获取失败'` 对应的 md5 哈希行
+
+- [ ] **Step 2: 补英文翻译**
+
+在 `packages/amis-editor/src/locale/en-US.ts` 中找到新增的哈希行（与 zh-CN.ts 同 key），值改为：
+
+```ts
+  '<新哈希>': 'Failed to load API list',
+```
+
+- [ ] **Step 3: 提交**
+
+```bash
+git add packages/amis-editor/src/locale/
+git commit -m "feat(amis-editor): 接口列表加载失败提示 i18n 文案"
+```
+
+---
+
+### Task 11: 使用文档
+
+**Files:**
+- Modify: `docs/zh-CN/extend/editor.md`（文末追加章节）
+
+- [ ] **Step 1: 追加章节**
+
+```markdown
+## 接口选择（getApi）
+
+宿主可以在编辑器上配置 `getApi`，让所有 API 配置项（接口地址输入框）支持从接口列表中联想选择，并自动回填请求方式、地址与入参模板：
+
+\`\`\`jsx
+import {Editor} from 'amis-editor';
+
+<Editor
+  getApi="/v3/api-docs" // 指向 OpenAPI 文档或简单接口列表的 GET 请求
+  // ...其他配置
+/>
+\`\`\`
+
+### 数据格式
+
+自动探测返回内容，支持三种格式：
+
+1. **OpenAPI 3.0**（推荐）：响应体含 `openapi` 字段，如 springdoc 暴露的 `/v3/api-docs`。`servers[0].url` 会作为 url 前缀拼接（自动去重斜杠）；`summary`/`operationId` 作为接口名；`tags` 用于下拉分组；path 参数替换为 `\${参数名}` 占位，query 与 requestBody 参数自动生成 `data` 映射模板（如 `{"pageNum": "\${pageNum}"}`），嵌套对象保留结构。
+2. **Swagger 2.0**：响应体含 `swagger` 字段，`basePath` 作为前缀，`definitions` 中的请求体定义同样解析。
+3. **简单列表**：响应体含 `items` 数组，每项 `{name, method, url, ...}`，`name/method/url` 之外的键（如 `data`、`headers`）在选中时原样透传。
+
+接口列表在编辑器会话内只请求一次并缓存；拉取失败会提示一次并自动降级为手动输入，不影响原有配置方式。未配置 `getApi` 时编辑器行为与之前完全一致。
+```
+
+- [ ] **Step 2: 提交**
+
+```bash
+git add docs/zh-CN/extend/editor.md
+git commit -m "docs: 编辑器 getApi 接口选择配置说明"
+```
+
+---
+
+### Task 12: 回归验证与手测
+
+**Files:** 无新增（验证任务；手测对 `packages/amis-editor/examples/Editor.tsx` 的临时改动**不提交**）
+
+- [ ] **Step 1: apiPicker 全量测试**
+
+Run: `./node_modules/.bin/jest packages/amis-editor/src/renderer/apiPicker/`
+Expected: 35 个用例全 PASS
+
+- [ ] **Step 2: 全局检查**
+
+Run: `npm run typecheck`
+Expected: 无新增错误
+
+Run: `npm run stylelint`
+Expected: 无新增错误
+
+- [ ] **Step 3: 手测准备（临时改动 examples/Editor.tsx，勿提交）**
+
+文件顶部（schema 定义之前）加 mock 数据：
+
+```tsx
+/** 临时手测 getApi 联想（验证后还原） */
+const mockOpenApi = {
+  openapi: '3.0.1',
+  servers: [{url: '/api'}],
+  paths: {
+    '/user/list': {
+      get: {
+        summary: '获取用户列表',
+        tags: ['用户管理'],
+        parameters: [
+          {name: 'pageNum', in: 'query', required: true, schema: {type: 'integer'}}
+        ]
+      }
+    },
+    '/user/{id}': {
+      get: {
+        summary: '用户详情',
+        tags: ['用户管理'],
+        parameters: [
+          {name: 'id', in: 'path', required: true, schema: {type: 'string'}}
+        ]
+      }
+    },
+    '/user/create': {
+      post: {
+        summary: '创建用户',
+        tags: ['用户管理'],
+        requestBody: {
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name'],
+                properties: {
+                  name: {type: 'string'},
+                  role: {type: 'string', enum: ['admin', 'user']}
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+};
+```
+
+`<Editor ... />` props 加 `getApi` 与 fetcher 拦截（合并进现有 amisEnv 对象）：
+
+```tsx
+        getApi="/api-docs.json"
+        amisEnv={
+          {
+            fetcher: async (api: any) => {
+              if (api?.url === '/api-docs.json') {
+                return {data: mockOpenApi}; // 裸文档在 res.data（axios 风格），验证外层探测
+              }
+              return Promise.resolve({data: {status: 0, data: {}}});
+            },
+            variable: {/* 保持原样 */},
+            replaceText
+          } as any
+        }
+```
+
+- [ ] **Step 4: 启动并逐项手测**
+
+Run: `npm start`，浏览器访问 `http://127.0.0.1:8888/packages/amis-editor/`
+
+| # | 手测项 | 预期 |
+|---|---|---|
+| 1 | 基线：先注释掉 getApi prop，拖入 Service 组件看 API 输入框 | 与现状完全一致（无下拉、无请求） |
+| 2 | 恢复 getApi，拖入 Service，点击 API 输入框 | 出现下拉，"用户管理"分组标题，3 项带 method 徽标 |
+| 3 | 输入 `用户` / `list` / `USER` | 分别按名称/路径/大小写不敏感过滤，前缀命中排前 |
+| 4 | 键盘 ↓ ↑ Enter Esc | 高亮循环移动；Enter 选中；Esc 收起；未高亮时 Enter 不拦截 |
+| 5 | 点击"用户详情"（get） | 输入框显示 `/api/user/${id}`；高级设置中 url 为 `/api/user/${id}` |
+| 6 | 点击"创建用户"（post） | 输入框显示 `POST:/api/user/create`；高级设置"发送数据"含 `{name: '${name}', role: '${role}'}` |
+| 7 | 手输 `/my/custom/api` 并失焦 | 正常生成配置，无强制选择/无报错 |
+| 8 | mock fetcher 改为 `throw new Error('x')` 重启 | toast 一次"接口列表获取失败"，输入框仍可正常手输；切换多个组件面板不重复 toast、Network 只有一次请求 |
+
+- [ ] **Step 5: 还原手测临时改动**
+
+Run: `git checkout -- packages/amis-editor/examples/Editor.tsx`
+Expected: `git status` 干净（除已提交内容）
+
+- [ ] **Step 6: 最终确认提交（如有手测中的样式/交互微调）**
+
+```bash
+git status
+# 如有微调：
+git add -A && git commit -m "fix(amis-editor): getApi 联想手测微调"
+```
+
+---
+
+## 完成定义
+
+- [ ] apiPicker 35 个单测全绿；typecheck/stylelint 无新增错误
+- [ ] 未配置 getApi：编辑器行为与现状零差异（手测项 1/7）
+- [ ] 配置 getApi：联想选择、入参自动化回填、失败降级全部符合 spec（手测项 2-8）
+- [ ] 文档（editor.md）与 i18n（zh-CN/en-US）齐备
