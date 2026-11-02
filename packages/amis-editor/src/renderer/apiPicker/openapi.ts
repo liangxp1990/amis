@@ -9,10 +9,11 @@ const HTTP_METHODS = [
   'delete',
   'patch',
   'head',
-  'options'
+  'options',
+  'trace'
 ];
 
-/** schema 属性树下钻的最大深度：兜底截断组合 $ref 环，防栈溢出 */
+/** schema 属性树下钻的最大深度：允许 depth 0-5 共 6 层，第 6 层起（depth > 5）截断，兜底防组合 $ref 环栈溢出 */
 const MAX_SCHEMA_DEPTH = 5;
 
 /**
@@ -29,6 +30,8 @@ export function parseOpenApi3(doc: any): ApiItem[] {
 /**
  * 解析 Swagger 2.0 文档为统一接口列表。
  * 与 3.0 的差异：前缀取 basePath；body 定义用 in:body 参数 + definitions。
+ * Args: doc - Swagger 文档对象（detect 命中层）
+ * Returns: 接口列表；paths 缺失/非法返回空数组
  */
 export function parseSwagger2(doc: any): ApiItem[] {
   const basePath = doc?.basePath;
@@ -72,16 +75,12 @@ function toApiItem(
   const queryParams: ApiParam[] = [];
   let bodyParams: ApiParam[] = [];
 
-  const parameters = ([] as any[]).concat(
-    pathItem.parameters || [],
-    operation.parameters || []
+  const parameters = dedupeParameters(
+    ([] as any[]).concat(pathItem.parameters || [], operation.parameters || [])
   );
   let bodySchema: any = null;
 
   parameters.forEach((p: any) => {
-    if (!p || typeof p !== 'object') {
-      return;
-    }
     if (p.in === 'path') {
       pathParams.push(operationParamToApiParam(p));
     } else if (p.in === 'query') {
@@ -92,8 +91,10 @@ function toApiItem(
     }
   });
 
-  // OpenAPI 3.0 的 requestBody（application/json 优先，无则取第一个 content 条目）
-  const content = operation?.requestBody?.content;
+  // OpenAPI 3.0 的 requestBody（可为 $ref 指向 #/components/requestBodies，先 resolveRef；
+  // application/json 优先，无则取第一个 content 条目）
+  const requestBody = resolveRef(doc, operation?.requestBody);
+  const content = requestBody?.content;
   if (content && typeof content === 'object') {
     bodySchema =
       content['application/json']?.schema ??
@@ -123,8 +124,8 @@ function operationParamToApiParam(p: any): ApiParam {
   const enumVals = Array.isArray(p.enum)
     ? p.enum
     : Array.isArray(schema?.enum)
-      ? schema.enum
-      : undefined;
+    ? schema.enum
+    : undefined;
   return {
     name: p.name ?? '',
     path: p.name ?? '',
@@ -137,9 +138,62 @@ function operationParamToApiParam(p: any): ApiParam {
 }
 
 /**
+ * 参数列表按 (name, in) 去重，后出现的覆盖先出现的（operation 级覆盖 pathItem 级）。
+ * What: OpenAPI 允许 operation 级覆盖 pathItem 级同名同位置的参数定义，
+ *   直接 concat 会两份都保留导致重复；同时过滤非法项（非对象）。
+ * Args: params - 拼接后的参数列表（pathItem 级在前，operation 级在后）
+ * Returns: 去重后的列表，保持各 (name, in) 首次出现的位置顺序
+ */
+function dedupeParameters(params: any[]): any[] {
+  const seen = new Map<string, any>();
+  const order: string[] = [];
+  params.forEach(p => {
+    if (!p || typeof p !== 'object') {
+      return;
+    }
+    const key = `${p.in ?? ''}:${p.name ?? ''}`;
+    if (!seen.has(key)) {
+      order.push(key);
+    }
+    seen.set(key, p);
+  });
+  return order.map(key => seen.get(key));
+}
+
+/**
+ * 合并 allOf 组合 schema（最小实现）。
+ * What: schema 含 allOf 数组时，各子 schema（各自 resolveRef）的 properties/required
+ *   合并进当前 schema 自身的 properties/required（两者同时存在则都保留，同名属性后者
+ *   覆盖；required 取并集）；oneOf/anyOf 组合不支持（后续文档声明限制）。
+ * Args: doc - 文档（$ref 查找根）; resolved - resolveRef 后的 schema 节点
+ * Returns: 合并后的 schema 对象（浅拷贝）；无 allOf 或非数组时原样返回
+ */
+function mergeAllOf(doc: any, resolved: any): any {
+  if (!resolved || !Array.isArray(resolved.allOf) || !resolved.allOf.length) {
+    return resolved;
+  }
+  const props: Record<string, any> = {...resolved.properties};
+  const required = new Set<string>(
+    Array.isArray(resolved.required) ? resolved.required : []
+  );
+  resolved.allOf.forEach((sub: any) => {
+    const subResolved = resolveRef(doc, sub);
+    if (!subResolved || typeof subResolved !== 'object') {
+      return;
+    }
+    Object.assign(props, subResolved.properties);
+    if (Array.isArray(subResolved.required)) {
+      subResolved.required.forEach((key: string) => required.add(key));
+    }
+  });
+  return {...resolved, properties: props, required: [...required]};
+}
+
+/**
  * schema（可含 $ref）→ 参数属性树。
- * What: 解析 object schema 的 properties；嵌套 object 下钻为 children，
- *   完整路径记为 a.b；超过 MAX_SCHEMA_DEPTH 截断（组合 $ref 环兜底）。
+ * What: 解析 object schema 的 properties（allOf 组合先合并，见 mergeAllOf）；
+ *   嵌套 object 下钻为 children，完整路径记为 a.b；
+ *   超过 MAX_SCHEMA_DEPTH 截断（组合 $ref 环兜底）。
  * Args: doc - 完整文档（$ref 指针查找根）; schema - 待解析 schema;
  *   parentPath - 父属性路径; depth - 当前深度
  * Returns: 属性参数列表；非 object/无 properties 返回空数组
@@ -154,13 +208,14 @@ function schemaToParams(
     return [];
   }
   const resolved = resolveRef(doc, schema);
-  const props = resolved?.properties;
+  const merged = mergeAllOf(doc, resolved);
+  const props = merged?.properties;
   if (!props || typeof props !== 'object') {
     return [];
   }
 
   const requiredKeys = new Set<string>(
-    Array.isArray(resolved.required) ? resolved.required : []
+    Array.isArray(merged.required) ? merged.required : []
   );
 
   return Object.keys(props).map(key => {
@@ -196,7 +251,11 @@ function resolveRef(doc: any, node: any): any {
   let current = node;
   const chainSeen = new Set<string>();
 
-  while (current && typeof current === 'object' && typeof current.$ref === 'string') {
+  while (
+    current &&
+    typeof current === 'object' &&
+    typeof current.$ref === 'string'
+  ) {
     const ref = current.$ref;
     if (chainSeen.has(ref)) {
       return null;
@@ -212,10 +271,28 @@ function lookupPointer(doc: any, ref: string): any {
   const segments = ref.replace(/^#\//, '').split('/');
   let target: any = doc;
   for (const seg of segments) {
-    target = target?.[seg];
+    target = target?.[unescapePointer(seg)];
     if (target == null) {
       return null;
     }
   }
   return target;
+}
+
+/**
+ * 反转义单个 JSON Pointer 段（RFC 6901）并容错解码 percent-encoding。
+ * What: ~1 → /、~0 → ~（~1 必须先于 ~0 还原，保证 ~01 正确得到字面量 ~1）；
+ *   部分工具产出的 percent-encoding 用 decodeURIComponent 解码，解码失败时
+ *   保留原值（容错）。
+ * Args: seg - 指针原始段
+ * Returns: 反转义后的段
+ */
+function unescapePointer(seg: string): string {
+  let s = seg.replace(/~1/g, '/').replace(/~0/g, '~');
+  try {
+    s = decodeURIComponent(s);
+  } catch (e) {
+    // 序列非法（如孤立的 %）：保留原值
+  }
+  return s;
 }

@@ -15,7 +15,9 @@ export function parseSimpleList(body: any): ApiItem[] {
   }
 
   return items
-    .filter(item => item && typeof item === 'object' && typeof item.url === 'string')
+    .filter(
+      item => item && typeof item === 'object' && typeof item.url === 'string'
+    )
     .map(item => {
       const {name, method, url, ...extra} = item;
       return {

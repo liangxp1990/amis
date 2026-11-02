@@ -7,9 +7,7 @@ const openapiRes = {
 };
 
 function makeFetcher(res: any, impl?: (api: any) => Promise<any>): ApiFetcher {
-  return impl
-    ? (impl as ApiFetcher)
-    : async () => res;
+  return impl ? (impl as ApiFetcher) : async () => res;
 }
 
 beforeEach(() => {
@@ -18,13 +16,8 @@ beforeEach(() => {
 
 describe('apiPicker: loadApiItems', () => {
   it('拉取并按探测格式解析为接口列表', async () => {
-    const items = await loadApiItems(
-      '/v3/api-docs',
-      makeFetcher(openapiRes)
-    );
-    expect(items).toEqual([
-      {name: 'A', method: 'get', path: '/a'}
-    ]);
+    const items = await loadApiItems('/v3/api-docs', makeFetcher(openapiRes));
+    expect(items).toEqual([{name: 'A', method: 'get', path: '/a'}]);
   });
 
   it('同 getApi 配置多实例只请求一次（模块级缓存）', async () => {
@@ -72,8 +65,20 @@ describe('apiPicker: loadApiItems', () => {
 
   it('失败 toast 全局去重：不同 getApi 的第二次失败不再 notify', async () => {
     const notify = jest.fn();
-    await loadApiItems('/bad1', makeFetcher(null, async () => {throw 0;}), notify);
-    await loadApiItems('/bad2', makeFetcher(null, async () => {throw 0;}), notify);
+    await loadApiItems(
+      '/bad1',
+      makeFetcher(null, async () => {
+        throw 0;
+      }),
+      notify
+    );
+    await loadApiItems(
+      '/bad2',
+      makeFetcher(null, async () => {
+        throw 0;
+      }),
+      notify
+    );
     expect(notify).toHaveBeenCalledTimes(1);
   });
 
@@ -81,6 +86,29 @@ describe('apiPicker: loadApiItems', () => {
     const res = {data: {status: 0, data: {items: [{name: 'n', url: '/n'}]}}};
     const items = await loadApiItems('/list', makeFetcher(res));
     expect(items).toEqual([{name: 'n', method: 'get', path: '/n'}]);
+  });
+
+  it('对象型 getApi：键序不同内容相同共享缓存，只请求一次（稳定序列化）', async () => {
+    let calls = 0;
+    const fetcher = makeFetcher(openapiRes, async () => {
+      calls++;
+      return openapiRes;
+    });
+    await loadApiItems({method: 'get', url: '/v3/api-docs'}, fetcher);
+    await loadApiItems({url: '/v3/api-docs', method: 'get'}, fetcher);
+    await loadApiItems({method: 'get', url: '/v3/api-docs'}, fetcher);
+    expect(calls).toBe(1);
+  });
+
+  it('无 notify 的失败不占用全局去重标记，后续实例仍能收到 toast', async () => {
+    const notify = jest.fn();
+    const failer = makeFetcher(null, async () => {
+      throw new Error('x');
+    });
+    expect(await loadApiItems('/silent', failer)).toBeNull();
+    expect(await loadApiItems('/loud', failer, notify)).toBeNull();
+    expect(notify).toHaveBeenCalledTimes(1);
+    expect(notify).toHaveBeenCalledWith('接口列表获取失败');
   });
 
   it('并发首次加载共享同一次请求（in-flight 去重）', async () => {

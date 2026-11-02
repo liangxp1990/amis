@@ -16,11 +16,16 @@ describe('apiPicker: detectApiSource', () => {
   // 按 amis 协议解包的宿主 fetcher：文档在 res.data.data
   it('探测 res.data.data 层的 OpenAPI（宿主 fetcher 已解包）', () => {
     const res = {data: {status: 0, data: {openapi: '3.0.1', paths: {}}}};
-    expect(detectApiSource(res)).toEqual({kind: 'openapi3', body: res.data.data});
+    expect(detectApiSource(res)).toEqual({
+      kind: 'openapi3',
+      body: res.data.data
+    });
   });
 
   it('探测 res.data.data 层的简单列表（已解包）', () => {
-    const res = {data: {status: 0, data: {items: [{name: 'a', method: 'get', url: '/a'}]}}};
+    const res = {
+      data: {status: 0, data: {items: [{name: 'a', method: 'get', url: '/a'}]}}
+    };
     expect(detectApiSource(res)).toEqual({kind: 'simple', body: res.data.data});
   });
 

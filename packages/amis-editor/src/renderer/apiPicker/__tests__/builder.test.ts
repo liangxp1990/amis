@@ -61,9 +61,7 @@ describe('apiPicker: buildApiFromItem 入参自动化', () => {
           name: 'profile',
           path: 'profile',
           type: 'object',
-          children: [
-            {name: 'city', path: 'profile.city', type: 'string'}
-          ]
+          children: [{name: 'city', path: 'profile.city', type: 'string'}]
         }
       ]
     };
@@ -104,8 +102,23 @@ describe('apiPicker: buildApiFromItem 入参自动化', () => {
   });
 
   it('无参数时只含 method/url', () => {
-    expect(
-      buildApiFromItem({name: 'x', method: 'get', path: '/x'})
-    ).toEqual({method: 'get', url: '/x'});
+    expect(buildApiFromItem({name: 'x', method: 'get', path: '/x'})).toEqual({
+      method: 'get',
+      url: '/x'
+    });
+  });
+
+  it('path 参数替换不受替换串 $ 展开影响（函数替换）', () => {
+    const item: ApiItem = {
+      name: 'x',
+      method: 'get',
+      path: '/x/{a$&b}',
+      pathParams: [{name: 'a$&b', path: 'a$&b', type: 'string'}]
+    };
+    // 字符串替换时 $& 会被展开为匹配子串，函数替换则原样保留
+    expect(buildApiFromItem(item)).toEqual({
+      method: 'get',
+      url: '/x/${a$&b}'
+    });
   });
 });

@@ -5,6 +5,8 @@ import type {Api} from 'amis-core'; // 仅类型，swc 擦除，无运行时依�
 /**
  * url 前缀拼接并去重中间斜杠。
  * Why: springdoc 的 servers[0].url 常以 / 结尾而 path 以 / 开头，直接拼接产生 //。
+ * Args: prefix - url 前缀（servers url / basePath，空/未定义时原样返回 path）; path - 原始路径
+ * Returns: 拼接后的 url，中间仅保留单个斜杠
  */
 export function joinUrl(prefix: string | undefined, path: string): string {
   if (!prefix) {
@@ -16,6 +18,7 @@ export function joinUrl(prefix: string | undefined, path: string): string {
 /**
  * 参数树 → data 映射模板。
  * What: 每个叶子参数生成 {参数名: '${完整路径}'}；嵌套 object 保留结构。
+ * Args: params - 参数树（queryParams/bodyParams，可含 children 嵌套）
  * Returns: 映射对象；参数为空返回 undefined
  */
 function paramsToData(params?: ApiParam[]): Record<string, any> | undefined {
@@ -45,7 +48,8 @@ function paramsToData(params?: ApiParam[]): Record<string, any> | undefined {
 export function buildApiFromItem(item: ApiItem): Api {
   let url = joinUrl(item.prefix, item.path);
   (item.pathParams || []).forEach(p => {
-    url = url.replace(`{${p.name}}`, `\${${p.name}}`);
+    // 函数替换：避免参数名含 $&/$' 等特殊串时被替换串展开语义改写
+    url = url.replace(`{${p.name}}`, () => `\${${p.name}}`);
   });
 
   const data = {

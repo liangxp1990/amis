@@ -22,16 +22,37 @@ const cache = new Map<string, Promise<ApiItem[] | null>>();
 /** 失败 toast 全局去重：编辑器会话内只提示一次 */
 let failureNotified = false;
 
-/** 缓存 key：字符串原样，对象 JSON 序列化 */
+/** 缓存 key：字符串原样，对象稳定序列化（递归按 key 排序，键序无关） */
 function cacheKey(getApi: any): string {
   if (typeof getApi === 'string') {
     return getApi;
   }
   try {
-    return JSON.stringify(getApi);
+    return stableStringify(getApi);
   } catch (e) {
     return String(getApi);
   }
+}
+
+/**
+ * 稳定序列化：对象按 key 排序后再序列化。
+ * What: 使内容相同但键序不同的对象产出同一字符串（共享缓存 key），
+ *   如 {url,method} 与 {method,url}；数组保持元素顺序。
+ * Args: value - 待序列化的值
+ * Returns: 序列化字符串
+ * Raises: 循环引用等导致的递归异常由调用方 cacheKey 捕获后降级为 String(getApi)
+ */
+function stableStringify(value: any): string {
+  if (value === null || typeof value !== 'object') {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map(item => stableStringify(item)).join(',')}]`;
+  }
+  const keys = Object.keys(value)
+    .sort()
+    .map(key => `${JSON.stringify(key)}:${stableStringify(value[key])}`);
+  return `{${keys.join(',')}}`;
 }
 
 /** 清空模块级缓存与去重标记（测试用） */
@@ -77,9 +98,11 @@ async function doLoad(
     result = null;
   }
 
-  if (!result && !failureNotified) {
+  // 仅在有 notify 回调时占用全局去重标记，避免无回调的失败吞掉后续实例的 toast；
+  // 失败结果仍照常缓存（负缓存语义不变）
+  if (!result && notify && !failureNotified) {
     failureNotified = true;
-    notify?.(API_LOAD_FAILED_MSG);
+    notify(API_LOAD_FAILED_MSG);
   }
   return result;
 }

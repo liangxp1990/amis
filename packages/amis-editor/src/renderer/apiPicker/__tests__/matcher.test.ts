@@ -17,9 +17,9 @@ describe('apiPicker: fuzzyMatchApi', () => {
 
   it('前缀命中排在包含命中之前', () => {
     const list: ApiItem[] = [
-      {name: '订单详情', method: 'get', path: '/b'},     // 名称前缀命中
-      {name: 'x', method: 'get', path: '/订单/c'},       // 路径包含命中
-      {name: '详情-订单', method: 'get', path: '/a'}     // 名称包含命中
+      {name: '订单详情', method: 'get', path: '/b'}, // 名称前缀命中
+      {name: 'x', method: 'get', path: '/订单/c'}, // 路径包含命中
+      {name: '详情-订单', method: 'get', path: '/a'} // 名称包含命中
     ];
     expect(fuzzyMatchApi(list, '订单')).toEqual([list[0], list[1], list[2]]);
     // '/订单' 仅命中路径前缀（注意 path 以 / 开头，'订单' 打头不会前缀命中）
