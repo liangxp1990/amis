@@ -88,7 +88,7 @@ flowchart LR
 |---|---|---|
 | 含 `openapi` 字段（3.x） | OpenAPI 3.0 解析器 | 遍历 `paths`，每个 path × method 为一项 |
 | 含 `swagger` 字段（2.0） | Swagger 2.0 解析器 | 同上；`definitions` / `in: body` 参数差异兼容 |
-| 含 `items` 数组 | 简单列表解析器 | `items: [{name, method, url, ...api定义}]`，`...` 中的 `data`/`headers` 等字段选中时透传 |
+| 含 `items` 数组 | 简单列表解析器 | `items: [{name, method, url, ...api定义}]`，`...` 中的 `data`/`headers` 等字段选中时透传；项内 `url` 归一映射到内部模型 `ApiItem.path`（简单列表不做前缀拼接，所见即所得） |
 
 **响应非法**定义：两层均未命中任何已知结构（无 `openapi`/`swagger`/`items`），视为拉取失败，走 3.3 降级路径。
 
@@ -141,7 +141,7 @@ interface ApiParam {
 
 选中 `ApiItem` 后生成回填的 api 对象：
 
-**url 前缀拼接规则**：OpenAPI 3 取 `servers[0].url`、Swagger 2 取 `basePath` 作为前缀（缺省为空串），拼接在 path 之前。前缀为相对路径（如 `/api`）直接拼接；为绝对 URL（`http://…`）时拼接完整 URL，回填后用户可在输入框/高级设置中自行改写。示例：`basePath: '/api'` + path `/user/{id}` → `/api/user/${id}`。
+**url 前缀拼接规则**：OpenAPI 3 取 `servers[0].url`、Swagger 2 取 `basePath` 作为前缀（缺省为空串），拼接在 path 之前，**拼接时去重中间斜杠**（springdoc 的 servers url 常以 `/` 结尾，path 以 `/` 开头，直接拼接会产生 `//`）。前缀为相对路径（如 `/api`）直接拼接；为绝对 URL（`http://…`）时拼接完整 URL，回填后用户可在输入框/高级设置中自行改写。示例：`basePath: '/api'` + path `/user/{id}` → `/api/user/${id}`。
 
 | OpenAPI 定义 | 生成规则 | 示例 |
 |---|---|---|
@@ -177,7 +177,7 @@ interface ApiParam {
 
 1. **格式探测**：OpenAPI 3.0 / Swagger 2.0 / 简单 items 三种响应正确路由；两层探测（裸文档在 `res.data` 与解包后在 `res.data.data`）均命中；两层均无已知结构判为非法
 2. **OpenAPI 解析**：paths 展开、summary/operationId 兜底命名、tags 分组、$ref 递归、环引用不栈溢出、enum/required 提取、servers/basePath 前缀提取
-3. **入参生成**：path 占位替换、url 前缀拼接（相对前缀/绝对 URL/缺省）、query→data、body 属性→data（嵌套结构保留）、简单列表字段透传
+3. **入参生成**：path 占位替换、url 前缀拼接（相对前缀/绝对 URL/缺省/**尾斜杠去重**）、query→data、body 属性→data（嵌套结构保留）、简单列表字段透传
 4. **联想交互**：模糊匹配（名称/路径/大小写）、选中回填值形态、与已有 value 的合并（adaptor 保留、data/headers 整替换）
 5. **缓存**：多个 APIControl 实例共享一次请求；失败负缓存（会话内不重试）；toast 全局一次
 6. **降级**：getApi 失败后手输不受影响
