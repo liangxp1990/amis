@@ -22,6 +22,7 @@ import type {Api, AMISButtonSchema} from 'amis';
 import type {AMISSchemaCollection, FormControlProps} from 'amis-core';
 import type {ActionSchema} from 'amis';
 import debounce from 'lodash/debounce';
+import {i18n as _i18n} from 'i18n-runtime';
 import {loadApiItems} from './apiPicker/loader';
 import {fuzzyMatchApi} from './apiPicker/matcher';
 import {buildApiFromItem} from './apiPicker/builder';
@@ -241,9 +242,9 @@ export default class APIControl extends React.Component<
     if (!getApi || typeof env?.fetcher !== 'function') {
       return;
     }
-    const {translate: __} = this.props;
-    const items = await loadApiItems(getApi, env.fetcher as any, msg =>
-      toast.error(__(msg))
+    // 文案字面量必须内联在 _i18n() 调用里，构建期 i18n 插件才会做哈希替换（见 event-control 先例）
+    const items = await loadApiItems(getApi, env.fetcher as any, () =>
+      toast.error(_i18n('接口列表获取失败'))
     );
     if (items) {
       this.setState({apiItems: items});
@@ -382,7 +383,12 @@ export default class APIControl extends React.Component<
       0,
       MAX_SUGGESTIONS
     );
-    this.setState({suggestions, activeIndex: -1});
+    // 有匹配时同步展开下拉：覆盖 Esc 收起后继续输入需重开的场景；无匹配保持现状
+    this.setState({
+      suggestions,
+      activeIndex: -1,
+      suggestOpened: suggestions.length > 0 || this.state.suggestOpened
+    });
   }
 
   /** 聚焦展开下拉（首次聚焦展示全量前 MAX_SUGGESTIONS 项） */
@@ -400,6 +406,10 @@ export default class APIControl extends React.Component<
 
   @autobind
   handleSuggestBlur() {
+    // 未展开时早退，避免未启用联想的普通失焦触发冗余 setState
+    if (!this.state.suggestOpened) {
+      return;
+    }
     this.setState({suggestOpened: false});
   }
 
@@ -431,7 +441,8 @@ export default class APIControl extends React.Component<
 
   /**
    * 选中接口项：buildApiFromItem 自动生成 api 对象（url 占位/入参模板），
-   * 复用 handleSubmit 与现有 value 合并（data/headers 整替换、adaptor 等保留）。
+   * 复用 handleSubmit 与现有 value 合并（沿用其 mergeWith 语义：仅当选中项
+   * 携带 data/headers 等字段时才整替换对应键，无参数项不会覆盖旧值，adaptor 等保留）。
    */
   @autobind
   pickApiItem(item: ApiItem) {
@@ -654,7 +665,13 @@ export default class APIControl extends React.Component<
     });
 
     return (
-      <div className="ae-ApiControl-suggest" key="api-suggest">
+      <div
+        className="ae-ApiControl-suggest"
+        key="api-suggest"
+        /* 容器级拦截 mousedown 抢焦点：覆盖下拉滚动条/轨道/分组标题/所有条目，
+           避免拖动滚动时 Input 先 blur 收起下拉 */
+        onMouseDown={e => e.preventDefault()}
+      >
         {groups.map(group => (
           <div
             className="ae-ApiControl-suggest-group"
@@ -671,8 +688,6 @@ export default class APIControl extends React.Component<
                 className={cx('ae-ApiControl-suggest-item', {
                   'is-active': suggestions.indexOf(item) === activeIndex
                 })}
-                /* 阻止 mousedown 抢焦点导致 Input 先 blur 收起下拉 */
-                onMouseDown={e => e.preventDefault()}
                 onClick={() => this.pickApiItem(item)}
               >
                 <span

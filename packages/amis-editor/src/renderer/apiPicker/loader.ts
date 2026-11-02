@@ -9,9 +9,6 @@ import type {ApiItem} from './types';
  */
 export type ApiFetcher = (api: any, ctx?: any) => Promise<any>;
 
-/** 失败提示原始文案（UI 层用 __() 翻译后 toast；文案由 npm run i18n:update 自动提取进 locale 哈希表） */
-export const API_LOAD_FAILED_MSG = '接口列表获取失败';
-
 /**
  * 模块级缓存：存 Promise 而非结果——既缓存成功/失败（负缓存），
  * 也天然去重并发 in-flight 请求（编辑器内多实例同时首次加载只发一次）。
@@ -67,13 +64,13 @@ export function resetApiCache(): void {
  *   （并发调用共享同一次请求）；失败结果 resolve 为 null 且同样缓存
  *   （负缓存，编辑器会话内不再重试）。
  * Args: getApi - 全局配置（SchemaApi）; fetcher - env.fetcher;
- *   notify - 失败提示回调（入参为原始中文文案，UI 层翻译后 toast，全局去重一次）
+ *   notify - 失败提示回调（无参，文案由 UI 层自带并翻译，全局去重一次）
  * Returns: 接口列表；失败/非法响应返回 null（调用方降级为普通手输）
  */
 export function loadApiItems(
   getApi: any,
   fetcher: ApiFetcher,
-  notify?: (msg: string) => void
+  notify?: () => void
 ): Promise<ApiItem[] | null> {
   const key = cacheKey(getApi);
   let cached = cache.get(key);
@@ -88,7 +85,7 @@ export function loadApiItems(
 async function doLoad(
   getApi: any,
   fetcher: ApiFetcher,
-  notify?: (msg: string) => void
+  notify?: () => void
 ): Promise<ApiItem[] | null> {
   let result: ApiItem[] | null = null;
   try {
@@ -102,7 +99,7 @@ async function doLoad(
   // 失败结果仍照常缓存（负缓存语义不变）
   if (!result && notify && !failureNotified) {
     failureNotified = true;
-    notify(API_LOAD_FAILED_MSG);
+    notify();
   }
   return result;
 }

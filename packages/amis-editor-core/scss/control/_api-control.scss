@@ -114,7 +114,7 @@
 
       &:hover,
       &.is-active {
-        background: rgba(0, 0, 0, 0.05);
+        background: var(--Tree-item-onHover-bg, rgba(0, 0, 0, 0.05));
       }
     }
 

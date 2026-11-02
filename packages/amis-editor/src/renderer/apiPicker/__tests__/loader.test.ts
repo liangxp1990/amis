@@ -42,7 +42,7 @@ describe('apiPicker: loadApiItems', () => {
     expect(calls).toBe(2);
   });
 
-  it('请求失败：返回 null、负缓存（会话内不重试）、notify 收到 key', async () => {
+  it('请求失败：返回 null、负缓存（会话内不重试）、notify 触发一次', async () => {
     let calls = 0;
     const notify = jest.fn();
     const fetcher = makeFetcher(null, async () => {
@@ -53,7 +53,6 @@ describe('apiPicker: loadApiItems', () => {
     expect(await loadApiItems('/bad', fetcher, notify)).toBeNull();
     expect(calls).toBe(1);
     expect(notify).toHaveBeenCalledTimes(1);
-    expect(notify).toHaveBeenCalledWith('接口列表获取失败');
   });
 
   it('响应非法（未知结构）：返回 null 且计入负缓存', async () => {
@@ -108,7 +107,6 @@ describe('apiPicker: loadApiItems', () => {
     expect(await loadApiItems('/silent', failer)).toBeNull();
     expect(await loadApiItems('/loud', failer, notify)).toBeNull();
     expect(notify).toHaveBeenCalledTimes(1);
-    expect(notify).toHaveBeenCalledWith('接口列表获取失败');
   });
 
   it('并发首次加载共享同一次请求（in-flight 去重）', async () => {

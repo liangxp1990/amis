@@ -635,7 +635,7 @@ import {Editor} from 'amis-editor';
 <Editor
   getApi="/v3/api-docs" // 指向 OpenAPI 文档或简单接口列表的 GET 请求
   // ...其他配置
-/>
+/>;
 ```
 
 ### 数据格式
@@ -646,11 +646,12 @@ import {Editor} from 'amis-editor';
 2. **Swagger 2.0**：响应体含 `swagger` 字段，`basePath` 作为前缀，`definitions` 中的请求体定义同样解析。
 3. **简单列表**：响应体含 `items` 数组，每项 `{name, method, url, ...}`，`name/method/url` 之外的键（如 `data`、`headers`）在选中时原样透传。
 
-接口列表在编辑器会话内只请求一次并缓存；拉取失败会提示一次并自动降级为手动输入，不影响原有配置方式。未配置 `getApi` 时编辑器行为与之前完全一致。
+接口列表在编辑器会话内只请求一次并缓存；拉取失败会提示一次并自动降级为手动输入，不影响原有配置方式。未配置 `getApi` 时编辑器行为与之前完全一致；配置了 `enablePickerMode`/`enableHighlight`（爱速搭式接入）的面板不启用联想选择。
 
 ### 已知限制
 
 - `oneOf`/`anyOf` 组合 schema 暂不解析，命中时入参模板为空，仍可手动输入；
 - `allOf` 仅合并一层，多级继承链只展开首层；
 - Swagger 2.0 的 `in: formData` 参数不进入模板；
-- schema 名含百分号转义样文本时 `$ref` 指针解析可能失配（RFC 6901 的 `~0`/`~1` 转义已支持）。
+- schema 名含百分号转义样文本时 `$ref` 指针解析可能失配（RFC 6901 的 `~0`/`~1` 转义已支持）；
+- 联想下拉在属性面板内渲染，靠近面板底部时可能被面板滚动容器裁剪，可滚动面板查看（门户渲染列为后续优化）。
