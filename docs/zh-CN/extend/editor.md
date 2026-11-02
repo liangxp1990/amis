@@ -624,3 +624,33 @@ popOverBody = [
 ## MiniEditor
 
 除了暴露 `Editor` 外，还有一个简单的编辑器 `MiniEditor`。与 `Editor` 的区别主要是，`MiniEditor` 只有编辑器区，没有左右两侧面板，像爱速搭的模型页面设计器就是基于此实现的。
+
+## 接口选择（getApi）
+
+宿主可以在编辑器上配置 `getApi`，让所有 API 配置项（接口地址输入框）支持从接口列表中联想选择，并自动回填请求方式、地址与入参模板：
+
+```jsx
+import {Editor} from 'amis-editor';
+
+<Editor
+  getApi="/v3/api-docs" // 指向 OpenAPI 文档或简单接口列表的 GET 请求
+  // ...其他配置
+/>
+```
+
+### 数据格式
+
+自动探测返回内容，支持三种格式：
+
+1. **OpenAPI 3.0**（推荐）：响应体含 `openapi` 字段，如 springdoc 暴露的 `/v3/api-docs`。`servers[0].url` 会作为 url 前缀拼接（自动去重斜杠）；`summary`/`operationId` 作为接口名；`tags` 用于下拉分组；path 参数替换为 `${参数名}` 占位，query 与 requestBody 参数自动生成 `data` 映射模板（如 `{"pageNum": "${pageNum}"}`），嵌套对象保留结构。
+2. **Swagger 2.0**：响应体含 `swagger` 字段，`basePath` 作为前缀，`definitions` 中的请求体定义同样解析。
+3. **简单列表**：响应体含 `items` 数组，每项 `{name, method, url, ...}`，`name/method/url` 之外的键（如 `data`、`headers`）在选中时原样透传。
+
+接口列表在编辑器会话内只请求一次并缓存；拉取失败会提示一次并自动降级为手动输入，不影响原有配置方式。未配置 `getApi` 时编辑器行为与之前完全一致。
+
+### 已知限制
+
+- `oneOf`/`anyOf` 组合 schema 暂不解析，命中时入参模板为空，仍可手动输入；
+- `allOf` 仅合并一层，多级继承链只展开首层；
+- Swagger 2.0 的 `in: formData` 参数不进入模板；
+- schema 名含百分号转义样文本时 `$ref` 指针解析可能失配（RFC 6901 的 `~0`/`~1` 转义已支持）。
