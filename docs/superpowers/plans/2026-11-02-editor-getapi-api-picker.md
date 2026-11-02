@@ -486,7 +486,8 @@ function toApiItem(
     name: operation.summary || operation.operationId || path,
     method,
     path,
-    prefix,
+    // 前缀为空时不写键（prefix?: 可选语义，toEqual 不忽略空串）
+    ...(prefix ? {prefix} : {}),
     tags: Array.isArray(operation.tags) ? operation.tags : undefined,
     queryParams: queryParams.length ? queryParams : undefined,
     pathParams: pathParams.length ? pathParams : undefined,
