@@ -31,4 +31,18 @@ describe('apiPicker: fuzzyMatchApi', () => {
     expect(fuzzyMatchApi(items, '  ')).toEqual(items);
     expect(fuzzyMatchApi(items, '不存在')).toEqual([]);
   });
+
+  it('路径用 prefix+path 完整形式匹配（选中后再聚焦仍可联想）', () => {
+    // 候选 path 无前缀、带 prefix：回填后的完整 url（/api/user/create）应命中
+    const list: ApiItem[] = [
+      {name: '创建用户', method: 'post', path: '/user/create', prefix: '/api'},
+      {name: '用户详情', method: 'get', path: '/user/{id}'}
+    ];
+    // 完整 url（含前缀）→ 前缀命中
+    expect(fuzzyMatchApi(list, '/api/user/create')).toEqual([list[0]]);
+    // 无前缀路径 → includes 命中（完整路径包含 /user/create）
+    expect(fuzzyMatchApi(list, '/user/create')).toEqual([list[0]]);
+    // 无 prefix 的项行为不变
+    expect(fuzzyMatchApi(list, '/user/{id}')).toEqual([list[1]]);
+  });
 });

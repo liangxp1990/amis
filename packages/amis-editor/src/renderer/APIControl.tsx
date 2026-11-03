@@ -26,6 +26,7 @@ import {i18n as _i18n} from 'i18n-runtime';
 import {loadApiItems} from './apiPicker/loader';
 import {fuzzyMatchApi} from './apiPicker/matcher';
 import {buildApiFromItem} from './apiPicker/builder';
+import ApiSuggestList from './apiPicker/ApiSuggestList';
 import type {ApiItem} from './apiPicker/types';
 
 export type ApiObject = Api & {
@@ -640,8 +641,7 @@ export default class APIControl extends React.Component<
   }
 
   /**
-   * 联想下拉层：按 tags[0] 分组（无 tags 平铺不显示组标题），保持 fuzzyMatch 排序；
-   * 每项 = method 徽标 + 名称 + 路径。
+   * 联想下拉层（渲染壳）：分组/徽标等展示复用 ApiSuggestList 共享组件。
    */
   @autobind
   renderApiSuggest() {
@@ -655,62 +655,12 @@ export default class APIControl extends React.Component<
       return null;
     }
 
-    const groups: Array<{tag: string; items: ApiItem[]}> = [];
-    suggestions.forEach(item => {
-      const tag = item.tags?.[0] || '';
-      let group = groups.find(g => g.tag === tag);
-      if (!group) {
-        group = {tag, items: []};
-        groups.push(group);
-      }
-      group.items.push(item);
-    });
-
     return (
-      <div
-        className="ae-ApiControl-suggest"
-        key="api-suggest"
-        /* 容器级拦截 mousedown 抢焦点：覆盖下拉滚动条/轨道/分组标题/所有条目，
-           避免拖动滚动时 Input 先 blur 收起下拉 */
-        onMouseDown={e => e.preventDefault()}
-      >
-        {groups.map(group => (
-          <div
-            className="ae-ApiControl-suggest-group"
-            key={group.tag || 'default'}
-          >
-            {group.tag ? (
-              <div className="ae-ApiControl-suggest-groupTitle">
-                {group.tag}
-              </div>
-            ) : null}
-            {group.items.map((item, idx) => (
-              <div
-                key={`${item.method}-${item.path}-${idx}`}
-                className={cx('ae-ApiControl-suggest-item', {
-                  'is-active': suggestions.indexOf(item) === activeIndex
-                })}
-                onClick={() => this.pickApiItem(item)}
-              >
-                <span
-                  className={cx(
-                    'ae-ApiControl-suggest-method',
-                    `is-${item.method}`
-                  )}
-                >
-                  {item.method.toUpperCase()}
-                </span>
-                <span className="ae-ApiControl-suggest-name" title={item.name}>
-                  {item.name}
-                </span>
-                <span className="ae-ApiControl-suggest-path" title={item.path}>
-                  {item.path}
-                </span>
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
+      <ApiSuggestList
+        suggestions={suggestions}
+        activeIndex={activeIndex}
+        onPick={this.pickApiItem}
+      />
     );
   }
 
@@ -789,7 +739,8 @@ export default class APIControl extends React.Component<
                 },
                 {
                   label: '接口地址',
-                  type: 'input-text',
+                  // getApi 接口列表可用时切换为联想输入（选中联动 url/method/data）
+                  type: this.state.apiItems ? 'ae-apiUrlControl' : 'input-text',
                   name: 'url',
                   mode: 'horizontal',
                   size: 'lg',

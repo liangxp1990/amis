@@ -18,6 +18,7 @@ import './renderer/NavDefaultActive';
 import './renderer/MapSourceControl';
 import './renderer/TimelineItemControl';
 import './renderer/APIControl';
+import './renderer/ApiUrlControl';
 import './renderer/APIAdaptorControl';
 import './renderer/ValidationControl';
 import './renderer/ValidateApiControl';
