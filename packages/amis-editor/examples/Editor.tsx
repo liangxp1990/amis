@@ -688,6 +688,7 @@ export default class AMisSchemaEditor extends React.Component<any, any> {
         onGlobalVariableInit={onGlobalVariableInit}
         onGlobalVariableSave={onGlobalVariableSave}
         onGlobalVariableDelete={onGlobalVariableDelete}
+        getApi="/openapi.json"
         amisEnv={
           {
             variable: {

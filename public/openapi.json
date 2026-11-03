@@ -1,0 +1,297 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "演示接口服务",
+    "description": "amis 编辑器 getApi 联想选择演示用的 OpenAPI 文档（模拟 springdoc 产出）",
+    "version": "1.0.0"
+  },
+  "servers": [{ "url": "/api" }],
+  "tags": [
+    { "name": "用户管理", "description": "用户的增删改查" },
+    { "name": "订单管理", "description": "订单查询与状态流转" },
+    { "name": "系统设置", "description": "字典与配置" }
+  ],
+  "paths": {
+    "/user/list": {
+      "get": {
+        "tags": ["用户管理"],
+        "summary": "获取用户列表",
+        "operationId": "listUser",
+        "parameters": [
+          {
+            "name": "pageNum",
+            "in": "query",
+            "required": true,
+            "description": "页码",
+            "schema": { "type": "integer", "default": 1 }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "description": "每页条数",
+            "schema": { "type": "integer", "default": 20 }
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "description": "姓名/手机号模糊搜索",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/user/{id}": {
+      "get": {
+        "tags": ["用户管理"],
+        "summary": "查询用户详情",
+        "operationId": "getUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "用户ID",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      },
+      "put": {
+        "tags": ["用户管理"],
+        "summary": "更新用户信息",
+        "operationId": "updateUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UserEditReq" }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      },
+      "delete": {
+        "tags": ["用户管理"],
+        "summary": "删除用户",
+        "operationId": "deleteUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/user/create": {
+      "post": {
+        "tags": ["用户管理"],
+        "summary": "创建用户",
+        "operationId": "createUser",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UserCreateReq" }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/user/export": {
+      "post": {
+        "tags": ["用户管理"],
+        "summary": "导出用户报表",
+        "operationId": "exportUser",
+        "parameters": [
+          {
+            "name": "fileType",
+            "in": "query",
+            "description": "导出格式",
+            "schema": { "type": "string", "enum": ["xlsx", "csv"] }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ids": {
+                    "type": "array",
+                    "description": "用户ID列表，空数组导出全部",
+                    "items": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/order/list": {
+      "get": {
+        "tags": ["订单管理"],
+        "summary": "查询订单列表",
+        "operationId": "listOrder",
+        "parameters": [
+          {
+            "name": "pageNum",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "订单状态",
+            "schema": {
+              "type": "string",
+              "enum": ["pending", "paid", "shipped", "done", "closed"]
+            }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/order/{orderNo}": {
+      "get": {
+        "tags": ["订单管理"],
+        "summary": "查询订单详情",
+        "operationId": "getOrder",
+        "parameters": [
+          {
+            "name": "orderNo",
+            "in": "path",
+            "required": true,
+            "description": "订单编号",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/order/{orderNo}/ship": {
+      "post": {
+        "tags": ["订单管理"],
+        "summary": "订单发货",
+        "operationId": "shipOrder",
+        "parameters": [
+          {
+            "name": "orderNo",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ShipReq" }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/system/dict": {
+      "get": {
+        "tags": ["系统设置"],
+        "summary": "获取数据字典",
+        "operationId": "getDict",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "required": true,
+            "description": "字典类型",
+            "schema": {
+              "type": "string",
+              "enum": ["gender", "education", "industry"]
+            }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/system/config": {
+      "get": {
+        "tags": ["系统设置"],
+        "summary": "读取系统配置项",
+        "operationId": "getConfig",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "UserProfile": {
+        "type": "object",
+        "description": "用户扩展资料（嵌套对象示例）",
+        "properties": {
+          "address": { "type": "string", "description": "联系地址" },
+          "city": { "type": "string", "description": "城市" },
+          "birthday": { "type": "string", "description": "生日 yyyy-MM-dd" }
+        }
+      },
+      "UserCreateReq": {
+        "type": "object",
+        "required": ["name", "phone"],
+        "properties": {
+          "name": { "type": "string", "description": "姓名" },
+          "phone": { "type": "string", "description": "手机号" },
+          "role": {
+            "type": "string",
+            "description": "角色",
+            "enum": ["admin", "operator", "viewer"]
+          },
+          "profile": { "$ref": "#/components/schemas/UserProfile" }
+        }
+      },
+      "UserEditReq": {
+        "allOf": [
+          { "$ref": "#/components/schemas/UserCreateReq" },
+          {
+            "type": "object",
+            "properties": {
+              "remark": { "type": "string", "description": "备注" },
+              "enabled": { "type": "boolean", "description": "是否启用" }
+            }
+          }
+        ]
+      },
+      "ShipReq": {
+        "type": "object",
+        "required": ["expressNo"],
+        "properties": {
+          "expressNo": { "type": "string", "description": "快递单号" },
+          "expressCompany": {
+            "type": "string",
+            "description": "快递公司",
+            "enum": ["sf", "yt", "zto", "ems"]
+          }
+        }
+      }
+    }
+  }
+}
