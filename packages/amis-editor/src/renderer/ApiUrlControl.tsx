@@ -8,8 +8,7 @@
  */
 import React from 'react';
 import cx from 'classnames';
-import {FormItem} from 'amis';
-import {Input, toast} from 'amis-ui';
+import {FormItem, InputBox, toast} from 'amis';
 import {i18n as _i18n} from 'i18n-runtime';
 import {getEnv} from 'mobx-state-tree';
 import {autobind} from 'amis-editor-core';
@@ -81,10 +80,10 @@ export class ApiUrlControl extends React.Component<
   }
 
   @autobind
-  handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+  handleChange(value: string) {
     const {onChange} = this.props;
-    onChange?.(e.currentTarget.value);
-    this.updateSuggestions(e.currentTarget.value);
+    onChange?.(value);
+    this.updateSuggestions(value);
   }
 
   /** 按输入内容更新联想列表；有匹配时自动展开（Esc 后继续输入可重开） */
@@ -175,11 +174,12 @@ export class ApiUrlControl extends React.Component<
 
     return (
       <div className={cx('ae-ApiUrlControl', className)}>
-        <Input
+        {/* InputBox 与表单 input-text 同款主题输入框，保证弹窗内样式统一 */}
+        <InputBox
           value={value ?? ''}
-          type="text"
           disabled={disabled}
           placeholder={placeholder}
+          clearable
           onChange={this.handleChange}
           onFocus={this.handleFocus}
           onBlur={this.handleBlur}
@@ -198,7 +198,6 @@ export class ApiUrlControl extends React.Component<
 }
 
 @FormItem({
-  type: 'ae-apiUrlControl',
-  renderLabel: false
+  type: 'ae-apiUrlControl'
 })
 export class ApiUrlControlRenderer extends ApiUrlControl {}
