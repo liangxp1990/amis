@@ -101,6 +101,13 @@ export interface AMISSchemaBase {
   visibleOn?: AMISExpression;
 
   /**
+   * 渲染所需权限码：string 或 string[]（任一命中即渲染）。
+   * 与 env.permissionCodes（当前用户权限码，支持 `*`/`xxx:*` 通配）比对，
+   * 未通过则组件不渲染；env.checkPermission 可覆盖内置判定。
+   */
+  permission?: string | string[];
+
+  /**
    * 是否静态展示，支持布尔值与表达式 staticOn 混合判定。
    */
   static?: boolean;

@@ -142,6 +142,19 @@ export interface RendererEnv {
   enableTestid?: boolean;
 
   /**
+   * 当前用户持有的权限码集合（用于 schema.permission 字段的内置判定）。
+   * 集合中的码支持通配：`*` 匹配一切，`system:user:*` 匹配
+   * `system:user` 前缀下所有操作。
+   */
+  permissionCodes?: string[];
+
+  /**
+   * 自定义权限判定（提供时覆盖 permissionCodes 的内置判定）。
+   * 入参为组件配置的 permission 值与组件 schema，返回 false 表示不渲染。
+   */
+  checkPermission?: (permission: string | string[], schema: any) => boolean;
+
+  /**
    * 替换文本，用于实现 URL 替换、语言替换等
    */
   replaceText?: {[propName: string]: any};

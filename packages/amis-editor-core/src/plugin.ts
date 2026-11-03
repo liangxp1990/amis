@@ -1270,6 +1270,42 @@ export abstract class BasePlugin implements PluginInterface {
       });
     }
 
+    // 权限面板：所有组件通用，配置渲染所需权限码（schema.permission 字段），
+    // 运行时由宿主 env.permissionCodes（支持 * 通配）或 env.checkPermission 判定
+    if (panels.length) {
+      panels.push({
+        key: 'permission',
+        icon: 'fa fa-lock',
+        title: '权限',
+        render: this.manager.makeSchemaFormRender({
+          panelById: store.activeId,
+          body: [
+            {
+              type: 'input-text',
+              name: 'permission',
+              label: '权限代码',
+              size: 'lg',
+              placeholder: '如 system:user:delete',
+              description:
+                '配置后仅持有对应权限的用户可见该组件；多个权限码用英文逗号分隔，任一满足即渲染。用户权限码支持 * 通配（如 system:user:* 表示其下全部操作）。',
+              pipeIn: (value: any) =>
+                Array.isArray(value) ? value.join(',') : value ?? '',
+              pipeOut: (value: any) => {
+                const codes = (value ?? '')
+                  .split(',')
+                  .map((item: string) => item.trim())
+                  .filter(Boolean);
+                if (!codes.length) {
+                  return undefined;
+                }
+                return codes.length === 1 ? codes[0] : codes;
+              }
+            }
+          ] as any
+        })
+      });
+    }
+
     // 如果是个多重身份证
     if (context.info.plugin === this && context.info.multifactor) {
       const sameIdChild: EditorNodeType = context.node.sameIdChild;

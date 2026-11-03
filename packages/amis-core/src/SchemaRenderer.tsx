@@ -19,6 +19,7 @@ import {IScopedContext, ScopedContext} from './Scoped';
 import {Schema, SchemaNode} from './types';
 import {DebugWrapper} from './utils/debug';
 import getExprProperties from './utils/filter-schema';
+import {hasPermission} from './utils/permission';
 import {
   anyChanged,
   chainEvents,
@@ -71,6 +72,7 @@ export const RENDERER_TRANSMISSION_OMIT_PROPS = [
   'visibleOn',
   'hidden',
   'hiddenOn',
+  'permission',
   'disabled',
   'disabledOn',
   'static',
@@ -395,6 +397,26 @@ export class SchemaRenderer extends React.Component<SchemaRendererProps, any> {
     this.forceUpdate();
   }
 
+  /**
+   * 权限码判定：组件声明了 permission 且未通过校验时返回 true（不渲染）。
+   * What: env.checkPermission 存在时覆盖内置判定（宿主自定义语义）；
+   *   否则用 hasPermission 与 env.permissionCodes 比对（支持 `*` 通配）；
+   *   宿主未配置权限体系（两者皆缺）时不拦截。
+   * Args: schema - 组件 schema; rest - 渲染 props（取 env）
+   * Returns: 应拦截渲染返回 true
+   */
+  isPermissionDenied(schema: Schema, rest: any): boolean {
+    const permission = (schema as any).permission;
+    if (permission == null) {
+      return false;
+    }
+    const env = rest.env;
+    if (typeof env?.checkPermission === 'function') {
+      return env.checkPermission(permission, schema) === false;
+    }
+    return !hasPermission(permission, env?.permissionCodes);
+  }
+
   render(): JSX.Element | null {
     let {
       $path: _,
@@ -441,6 +463,7 @@ export class SchemaRenderer extends React.Component<SchemaRendererProps, any> {
     this.isStatic = isStatic;
 
     if (
+      this.isPermissionDenied(schema, rest) ||
       visible === false ||
       (visible !== true &&
         exprProps &&

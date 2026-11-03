@@ -37,6 +37,7 @@ export * from './object';
 export * from './offset';
 export * from './offsetParent';
 export * from './optionValueCompare';
+export * from './permission';
 export * from './position';
 export * from './prettyBytes';
 export * from './renderer-event';

@@ -38,6 +38,17 @@ const schema = {
           label: 'Text'
         }
       ]
+    },
+    {
+      type: 'button',
+      label: '删除用户（持有 system:user:* 可见）',
+      level: 'danger',
+      permission: 'system:user:delete'
+    },
+    {
+      type: 'button',
+      label: '导出财报（演示无权限不渲染）',
+      permission: 'finance:report:export'
     }
   ]
 };
@@ -691,6 +702,9 @@ export default class AMisSchemaEditor extends React.Component<any, any> {
         getApi="/openapi.json"
         amisEnv={
           {
+            // 演示当前用户权限码：system:user:* 通配覆盖用户删除按钮，
+            // finance:* 未持有 → 导出财报按钮不渲染
+            permissionCodes: ['system:user:*'],
             variable: {
               id: 'appVariables',
               namespace: 'appVariables',

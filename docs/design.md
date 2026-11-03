@@ -189,3 +189,26 @@ interface ApiParam {
 |---|---|
 | 第一期（本设计） | getApi 全局配置 + OpenAPI(3.0/2.0)/简单列表解析 + 联想下拉 + 占位模板回填 |
 | 二期（候选） | ActionApiControl（事件动作面板）覆盖；选中后参数绑定面板（变量选择器逐参数绑定）；responses 结构驱动的返回数据映射提示 |
+
+---
+
+# 附：组件权限码渲染控制（2026-11-03 追加实现）
+
+## 机制
+
+- **schema 一等字段** `permission?: string | string[]`（数组任一命中即渲染，any 语义）
+- **运行时拦截**：SchemaRenderer 可见性咽喉点（invisible 判定块）前置权限判定，未通过则全部渲染路径统一 return null；字段已加入 props 透传黑名单
+- **判定来源**（env 声明即透传）：
+  - `env.permissionCodes: string[]` 内置判定——用户权限码支持通配：`*` 匹配一切；`system:user:*` 匹配 `system:user` 前缀下所有操作（含 `system:user` 本身）
+  - `env.checkPermission(permission, schema)` 提供时覆盖内置判定（宿主自定义语义：角色/动态规则等）
+  - 两者皆缺 = 宿主未接入权限体系，不拦截（零行为变化）
+- **编辑器**：BasePlugin.buildEditorPanel 单点注入独立"权限" tab（全部组件面板含 vRendererConfig 分支），权限代码输入（逗号分隔多码，pipeIn/pipeOut 与 string|string[] 互转，清空删字段）
+
+## 宿主接入
+
+```tsx
+amisRender(schema, {
+  permissionCodes: currentUser.permissions,  // 如 ['system:user:*']
+  // 或 checkPermission: (perm) => 自定义判定
+});
+```
