@@ -1234,12 +1234,14 @@ export abstract class BasePlugin implements PluginInterface {
 
               return this.manager.makeSchemaFormRender({
                 ...baseProps,
-                body: panelBody
+                body: this.injectPermissionTab(panelBody as any)
               });
             }, omit(plugin.async, 'enable'))
           : this.manager.makeSchemaFormRender({
               ...baseProps,
-              body: (event.data || body) as SchemaCollection
+              body: this.injectPermissionTab(
+                (event.data || body) as any
+              ) as SchemaCollection
             })
       });
     } else if (
@@ -1270,42 +1272,6 @@ export abstract class BasePlugin implements PluginInterface {
       });
     }
 
-    // 权限面板：所有组件通用，配置渲染所需权限码（schema.permission 字段），
-    // 运行时由宿主 env.permissionCodes（支持 * 通配）或 env.checkPermission 判定
-    if (panels.length) {
-      panels.push({
-        key: 'permission',
-        icon: 'fa fa-lock',
-        title: '权限',
-        render: this.manager.makeSchemaFormRender({
-          panelById: store.activeId,
-          body: [
-            {
-              type: 'input-text',
-              name: 'permission',
-              label: '权限代码',
-              size: 'lg',
-              placeholder: '如 system:user:delete',
-              description:
-                '配置后仅持有对应权限的用户可见该组件；多个权限码用英文逗号分隔，任一满足即渲染。用户权限码支持 * 通配（如 system:user:* 表示其下全部操作）。',
-              pipeIn: (value: any) =>
-                Array.isArray(value) ? value.join(',') : value ?? '',
-              pipeOut: (value: any) => {
-                const codes = (value ?? '')
-                  .split(',')
-                  .map((item: string) => item.trim())
-                  .filter(Boolean);
-                if (!codes.length) {
-                  return undefined;
-                }
-                return codes.length === 1 ? codes[0] : codes;
-              }
-            }
-          ] as any
-        })
-      });
-    }
-
     // 如果是个多重身份证
     if (context.info.plugin === this && context.info.multifactor) {
       const sameIdChild: EditorNodeType = context.node.sameIdChild;
@@ -1323,6 +1289,91 @@ export abstract class BasePlugin implements PluginInterface {
         });
       }
     }
+  }
+
+  /**
+   * 向组件属性面板注入"权限"页签（与属性/外观/事件并列）。
+   * What: 在面板 body 的第一个 tabs 结构中追加"权限" tab（配置
+   *   schema.permission，运行时由宿主 env.permissionCodes 支持 * 通配或
+   *   env.checkPermission 判定）；body 无 tabs 时追加到末尾。不改变外层
+   *   panel 数量，避免破坏右侧面板的单面板交互形态。
+   * Args: body - 面板 body（可能含宿主 after-build-panel-body 改写结果）
+   * Returns: 注入后的 body（原数组被修改时直接返回）
+   */
+  injectPermissionTab(body: any): any {
+    const permissionItem = {
+      type: 'input-text',
+      name: 'permission',
+      label: '权限代码',
+      size: 'lg',
+      mode: 'horizontal',
+      placeholder: '如 system:user:delete',
+      description:
+        '配置后仅持有对应权限的用户可见该组件；多个权限码用英文逗号分隔，任一满足即渲染。用户权限码支持 * 通配（如 system:user:* 表示其下全部操作）。',
+      pipeIn: (value: any) =>
+        Array.isArray(value) ? value.join(',') : value ?? '',
+      pipeOut: (value: any) => {
+        const codes = (value ?? '')
+          .split(',')
+          .map((item: string) => item.trim())
+          .filter(Boolean);
+        if (!codes.length) {
+          return undefined;
+        }
+        return codes.length === 1 ? codes[0] : codes;
+      }
+    };
+
+    const injectInto = (items: any[]): boolean => {
+      for (const item of items) {
+        if (!item || typeof item !== 'object') {
+          continue;
+        }
+        // tabs 面板（属性/外观/事件形态）：追加"权限"页签
+        if (item.type === 'tabs') {
+          item.tabs = item.tabs || [];
+          if (item.tabs.some((tab: any) => tab?.title === '权限')) {
+            return true;
+          }
+          item.tabs.push({title: '权限', tab: [permissionItem]});
+          return true;
+        }
+        // collapseGroup 面板（折叠分组形态，tpl 产物 type 为 'collapse-group'）
+        // ：追加"权限"分组
+        if (item.type === 'collapse-group' || item.type === 'collapseGroup') {
+          item.body = item.body || [];
+          if (item.body.some((c: any) => c?.title === '权限')) {
+            return true;
+          }
+          item.body.push({title: '权限', key: '权限', body: [permissionItem]});
+          return true;
+        }
+      }
+      // 顶层无 tabs/collapseGroup：向下钻一层（fieldset/wrapper 等包装场景）
+      for (const item of items) {
+        if (Array.isArray(item?.body) && injectInto(item.body)) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    // 兼容对象形态的面板 body（部分插件如 Button 直接返回单个 schema 对象）
+    if (body && typeof body === 'object' && !Array.isArray(body)) {
+      injectInto([body]);
+      return body;
+    }
+    if (!Array.isArray(body)) {
+      return body;
+    }
+    if (!injectInto(body)) {
+      body.push({
+        type: 'wrapper',
+        className: 'p-none',
+        body: [permissionItem]
+      });
+    }
+    return body;
   }
 
   /**
