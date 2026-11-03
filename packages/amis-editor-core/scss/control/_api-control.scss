@@ -218,10 +218,11 @@
 }
 
 /* 高级设置弹窗内的接口地址联想输入（ae-apiUrlControl）：
-   联想层复用 ae-ApiControl-suggest 样式，此处仅提供定位上下文 */
+   联想层复用 ae-ApiControl-suggest 样式，此处仅提供定位上下文。
+   注意不要设 width：Form-control 的 size 约束（如 sizeLg）是 min-width，
+   设 100% 会让 inline-block 容器撑满整行，比相邻 input-text 字段宽 */
 .ae-ApiUrlControl {
   position: relative;
-  width: 100%;
 
   .ae-ApiControl-suggest {
     top: calc(100% + 4px);
