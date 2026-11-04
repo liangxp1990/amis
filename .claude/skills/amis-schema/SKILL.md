@@ -53,6 +53,13 @@ status 非 0 一律按失败处理并 toast msg。简单写法 `"api": "post:/ap
 ```
 逻辑编排支持条件/循环/并行；组件可用事件见各组件文档底部事件表。旧式联动写法能换 onEvent 就换。
 
+### 权限控制（permission，6.14.3+）
+任意组件可配 `permission`（string 或 string[]，数组任一命中即渲染），未通过则**不渲染**（DOM 中不存在，区别于 visible 隐藏）：
+```json
+{"type": "button", "label": "删除", "permission": "system:user:delete"}
+```
+判定数据由宿主传入 render props：`permissionCodes: string[]`（用户权限码集合，支持通配 `*` 全量、`system:user:*` 段前缀）或 `checkPermission(permission, schema)` 回调（覆盖内置判定）。**宿主未接入时 permission 不生效**（组件正常渲染）——写配置时若宿主没传权限体系，不要用 permission 做业务显隐（那是 visibleOn 的职责）。详见 references/docs/types/schemanode.md「配置权限」。
+
 ## 常用组件速查
 
 | 需求 | type | 文档（references/docs/ 下） |

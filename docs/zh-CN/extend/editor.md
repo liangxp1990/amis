@@ -655,3 +655,25 @@ import {Editor} from 'amis-editor';
 - Swagger 2.0 的 `in: formData` 参数不进入模板；
 - schema 名含百分号转义样文本时 `$ref` 指针解析可能失配（RFC 6901 的 `~0`/`~1` 转义已支持）；
 - 联想下拉在属性面板内渲染，靠近面板底部时可能被面板滚动容器裁剪，可滚动面板查看（门户渲染列为后续优化）。
+
+## 权限代码配置（permission）
+
+编辑器内选中任意组件后，属性面板会出现"权限"页签，可为组件配置渲染所需的权限代码（写入 schema 的 `permission` 字段，多个用英文逗号分隔，任一满足即渲染）。
+
+页面运行时的权限判定由宿主应用在 `amisEnv`（或 `render` 的 props）中提供：
+
+```jsx
+<Editor
+  amisEnv={{
+    // 方式一：当前用户权限码集合（推荐），支持通配：* 全量、system:user:* 段前缀
+    permissionCodes: currentUser.permissions,
+    // 方式二：自定义判定（提供时覆盖方式一），适合角色/动态规则
+    // checkPermission: (permission, schema) => myACL.check(permission),
+    ...
+  }}
+/>
+```
+
+编辑器画布/预览同样遵循该配置——无权限的组件在编辑器内也不渲染，所见即所得。宿主未接入（两者均未传）时权限配置不生效、组件正常渲染，对存量应用零影响。
+
+运行时通配规则与字段语义详见 [SchemaNode 权限配置](../types/schemanode#配置权限)。

@@ -52,6 +52,23 @@ schemaFilter={(schema, isPreview) => {
 3. **代码模式无提示**：$schemaUrl 未部署或路径 404
 4. **保存的 schema 存库**：`onChange` 拿到的是最新 json（编辑器自动给节点加的 `$$id` 等编辑器字段，落库前可清洗）
 
+## 权限代码配置（permission，6.14.3+）
+
+编辑器内选中任意组件 → 属性面板"权限"页签 → 配置权限代码（写入 schema 的 `permission` 字段）。运行时判定由宿主在 `amisEnv`（或 render props）提供：
+
+```tsx
+<Editor
+  amisEnv={{
+    // 方式一（推荐）：当前用户权限码集合，支持通配 *（全量）/ system:user:*（段前缀）
+    permissionCodes: currentUser.permissions,
+    // 方式二：自定义判定（覆盖方式一），permission 为组件配置码，返回 false 不渲染
+    // checkPermission: (permission, schema) => myACL.check(permission),
+  }}
+/>
+```
+
+要点：① 编辑器画布/预览同样遵循（无权限组件在编辑器内也不渲染，所见即所得）② 宿主两者都未传时 permission 不生效、组件正常渲染（存量零影响）③ 通配规则与运行时语义见 references/editor.md「权限代码配置（permission）」。
+
 ## 生命周期事件（埋点/管控用）
 
 `onInit`、`onActive`（点选）、`beforeInsert/afterInsert`、`beforeUpdate/afterUpdate`、`beforeReplace`、`beforeMove`、`beforeDelete`、`onDndAccept`（拖拽是否接收）、`onBuildPanels`（干预右侧面板）、`onBuildContextMenus` 等。before 系列返回 false 或 `event.preventDefault()` 可拦截操作。

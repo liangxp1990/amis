@@ -117,6 +117,56 @@ SchemaNode 是指每一个 amis 配置节点的类型，支持`模板`、`Schema
 
 > `visible`和`hidden`，`visibleOn`和`hiddenOn`除了判断逻辑相反以外，没有任何区别
 
+### 配置权限
+
+> 自 6.14.3 起，所有 `Schema` 类型都可以配置 `permission` 字段，按**权限码**控制组件是否渲染（未通过则组件完全不渲染，DOM 中不存在，区别于上面的隐藏）。
+
+```json
+{
+  "type": "button",
+  "label": "删除用户",
+  "level": "danger",
+  "permission": "system:user:delete"
+}
+```
+
+- `permission` 支持字符串或字符串数组（数组任一命中即渲染）
+- 权限码的判定数据由宿主应用在初始化时传入：
+
+```js
+// JS SDK
+const scoped = amis.embed('#root', schema, {
+  permissionCodes: ['system:user:view', 'system:user:*']
+});
+
+// React npm（render 的第三个参数，与 fetcher 同级）
+renderAmis(schema, {permissionCodes: currentUser.permissions}, env);
+```
+
+**通配规则**（用户持有的权限码支持通配）：
+
+| 用户权限码 | 能否访问 `system:user:delete` | 说明 |
+|---|---|---|
+| `system:user:delete` | ✅ | 精确匹配 |
+| `system:user:*` | ✅ | 段通配，覆盖 `system:user` 下所有操作（含 `system:user` 本身） |
+| `*` | ✅ | 全量通配（超管），匹配一切权限码 |
+| `system:role:*` | ❌ | 不越界，通配只作用于本前缀 |
+
+**自定义判定**：传入 `checkPermission` 回调可覆盖内置判定（优先级高于 `permissionCodes`），适合角色体系、动态规则等场景：
+
+```js
+renderAmis(schema, {
+  checkPermission: (permission, schema) => {
+    // permission 为组件配置的权限码（string | string[]），返回 false 则不渲染
+    return myACL.check(permission, currentUser);
+  }
+}, env);
+```
+
+> 宿主未传入 `permissionCodes` 与 `checkPermission` 时（未接入权限体系），所有 `permission` 配置不生效，组件正常渲染——权限能力对存量应用零影响。
+>
+> 可视化编辑器中，选中任意组件后在属性面板的"权限"页签可配置权限代码（多个用英文逗号分隔）。
+
 ## SchemaArray 配置数组
 
 明白了何为`Schema`之后，你就会很轻松理解`SchemaArray`，它其实就是支持通过数组配置`Schema`，从而在某一节点层级下，配置多个组件

@@ -177,6 +177,7 @@ registerRenderer({
 - **自带数据域**：`@Renderer({type, storeType: 'xxxStore', isolateScope: true})`，store 定义在 amis-core/src/store/（参考 service/crud）
 - **属性自动支持 `${}` 变量**：config 加 `autoVar: true`
 - **替换系统渲染器**：同 type 重新注册需 `override: true`
+- **通用渲染控制字段零成本**：`visible/hidden/visibleOn/hiddenOn/disabledOn` 与 `permission`（6.14.3+ 权限码，宿主 env.permissionCodes/checkPermission 判定）由 SchemaRenderer 在渲染前统一拦截，新组件**无需写任何代码**自动获得，也不受组件 props 影响（已列入透传黑名单 RENDERER_TRANSMISSION_OMIT_PROPS）
 - **编辑器支持**：继续用 amis-new-editor-plugin skill 加编辑器插件
 
 ## 实战铁律（captcha 组件开发实证，违反必踩坑）
