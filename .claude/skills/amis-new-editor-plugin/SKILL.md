@@ -5,7 +5,7 @@ description: 开发 amis 可视化编辑器插件（amis-editor）时使用。�
 
 # 开发 amis 编辑器插件
 
-依据 docs/zh-CN/extend/editor.md。前提：**先有对应的 amis 渲染器**（@Renderer 注册过的 type），插件只是让它在编辑器中可拖入、可配置。
+**前提：本 skill 在 amis 源码仓库内执行**（任务是改 packages/amis-editor，路径均相对仓库根）。编辑器原理全文见内置 `references/editor.md`（拷贝自 docs/zh-CN/extend/editor.md）。技术前提：**先有对应的 amis 渲染器**（@Renderer 注册过的 type），插件只是让它在编辑器中可拖入、可配置。
 
 ## 插件模板（v6 真实结构，以 captcha/Radios 插件为范本实证）
 
@@ -174,3 +174,7 @@ regions: Array<RegionConfig> = [
 ## Editor 常用宿主 props（接入/联调时）
 
 `value`（schema）、`onChange`、`preview`、`isMobile`、`$schemaUrl`（amis 产出的 schema.json 路径，代码模式提示用，构建见 `npm run build-schemas --workspace amis`）、`amisEnv`（透传给内嵌 amis 渲染）、`plugins`、`schemaFilter`（api proxy 解决预览跨域）、各类 before/after 生命周期事件（beforeInsert/afterUpdate/onActive 等，可 preventDefault）。
+
+## 内置资料与同步
+
+- `references/editor.md` ← docs/zh-CN/extend/editor.md；仓库内更新后同步：`cp docs/zh-CN/extend/editor.md .claude/skills/amis-new-editor-plugin/references/`

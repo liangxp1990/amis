@@ -63,7 +63,7 @@ themes/
 3. amis-ui 的 rollup.config.js（:73-113）会对 `scss/themes/*.scss` 逐个 postcss extract 出 `lib/themes/my-theme.css`；本地快速验证可直接 `npx sass` 手工编译该入口
 4. JS 注册：`theme('mytheme', {classPrefix: 'my-', classnames: makeClassnames('my-'), renderers, components})`
 5. 宿主：引 `my-theme.css` + 渲染传 `{theme: 'mytheme'}`
-6. 注意：升级 amis 版本需重新编译主题 css（官方因此不推荐此路线，见 docs/zh-CN/style/index.md:13）
+6. 注意：升级 amis 版本需重新编译主题 css（官方因此不推荐此路线）
 
 ## 5. 构建与产物链
 
@@ -82,7 +82,7 @@ packages/amis/build.sh
 
 ## 6. 运行时 CSS 变量：page.cssVars（Page.tsx:385-411）
 
-`updateVarStyle()` 遍历 `props.cssVars`：key 必须以 `--` 开头且不含 `:`；值含 `expression(` 或 `;` 的直接丢弃（防 CSS 注入）；拼成 `:root {...}` 写入内联 `<style>`。不支持 IE11（ie11 产物里变量已被静态化）。动态换肤参考实现：examples/components/Theme.tsx + examples/components/theme/vars.tsx（每个变量带 cxd/antd 双主题默认值）。
+`updateVarStyle()` 遍历 `props.cssVars`：key 必须以 `--` 开头且不含 `:`；值含 `expression(` 或 `;` 的直接丢弃（防 CSS 注入）；拼成 `:root {...}` 写入内联 `<style>`。不支持 IE11（ie11 产物里变量已被静态化）。动态换肤思路：变量写入 <style> 标签实时生效（amis 仓库 examples/components/Theme.tsx 有实现）。
 
 ## 7. 开发规约（packages/amis-ui/scss/README.md + _variables.scss 注释）
 

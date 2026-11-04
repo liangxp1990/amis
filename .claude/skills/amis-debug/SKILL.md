@@ -5,7 +5,7 @@ description: 排查 amis 页面渲染/数据/交互问题时使用。触发场�
 
 # amis 问题排查
 
-依据 docs/zh-CN/extend/debug.md 与各概念文档。按症状走对应路径，先确认症状再动手。
+本 skill 排障知识自包含：调试面板用法见 `references/debug.md`、模板与表达式区别见 `references/expression.md`（均拷贝自 amis 官方文档）。涉及源码定位的路径（packages/...）相对 **amis 源码仓库根**——宿主项目排障时这部分跳过或引导用户查官方文档站 https://aisuda.github.io/amis/ 。按症状走对应路径，先确认症状再动手。
 
 ## 第一步：开启内置调试面板
 
@@ -22,14 +22,14 @@ description: 排查 amis 页面渲染/数据/交互问题时使用。触发场�
 
 1. **数据链**：子组件能向上找父级数据域，但父看不到子的。调试面板点组件看数据链里有没有这个变量
 2. **API 返回格式**：必须是 `{status: 0, msg: '', data: {...}}`，status 非 0 一律按失败处理，数据只取 `data` 字段 —— 这是最高频原因
-3. **模板语法**：`${xxx}` 是模板（amis-formula 求值）；条件类属性（visibleOn/hiddenOn/disabledOn）是**表达式**，不写 `${}` 包裹整个（详见 docs/zh-CN/concepts/expression.md）
+3. **模板语法**：`${xxx}` 是模板（amis-formula 求值）；条件类属性（visibleOn/hiddenOn/disabledOn）是**表达式**，不写 `${}` 包裹整个（详见 references/expression.md）
 4. **数据映射**：api 的 `data: {a: '${b}'}` 是发送前的映射，别和响应弄混
 
 ### 组件渲染不出来
 
 1. 控制台报错优先
-2. `type` 拼写（kebab-case）；宿主项目里还要确认对应渲染器模块被 import 过（`packages/amis/src/index.tsx` 里没 import 的就是没有）
-3. 本仓库内可用 `getRenderers()`（amis-core 导出）查注册表
+2. `type` 拼写（kebab-case）；宿主项目里还要确认对应渲染器模块被 import 过（amis 源码仓库 `packages/amis/src/index.tsx` 里没 import 的就是没有；SDK 版全量已含）
+3. amis 源码仓库内可用 `getRenderers()`（amis-core 导出）查注册表
 4. 定位实现源码：`packages/amis/src/renderers/` 下按文件名找（表单控件在 Form/ 子目录），或 `grep -rn "type: 'xxx'" packages/amis/src/renderers/`
 5. 数据流看 `packages/amis-core/src/store/` 对应 store（form/formItem/crud/service...）
 
@@ -44,7 +44,7 @@ description: 排查 amis 页面渲染/数据/交互问题时使用。触发场�
 1. `onEvent` 需要 1.7.0+；动作配置结构：`onEvent.{事件名}.actions[].actionType/args`
 2. 动作实现在 `packages/amis-core/src/actions/`，按 actionType 找源码（如 toast、ajax、setValue、custom）
 3. 目标组件动作（componentId）要求目标配置了 `id`；广播（broadcast）排查事件名是否一致
-4. 事件表在组件文档底部（docs/zh-CN/components/xxx.md）
+4. 事件表在组件文档底部（amis-schema skill 的 references/docs/components/xxx.md，或官方文档站）
 
 ### 样式/主题异常
 
@@ -82,3 +82,9 @@ test('case', () => {
 - 宿主项目报 `export 'xxx' was not found in 'amis-core'`：说明用了比宿主安装版本新的 API，用报错里打印的 possible exports 清单核对，再 `git log -S "xxx" --oneline` 查该 API 引入时间/对应版本
 - README 提示 jest 前需先 `npm run build`；根 jest 配置实际用 @swc/jest 映射 src，若失败再考虑 build
 - Node 版本：推荐 12/14/16，npm 7+（workspaces）
+
+## 内置资料与同步
+
+- `references/debug.md` ← docs/zh-CN/extend/debug.md
+- `references/expression.md` ← docs/zh-CN/concepts/expression.md
+- 仓库内更新后同步（在 amis 仓库根执行）：`cp docs/zh-CN/extend/debug.md docs/zh-CN/concepts/expression.md .claude/skills/amis-debug/references/`

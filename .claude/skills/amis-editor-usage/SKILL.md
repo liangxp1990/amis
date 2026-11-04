@@ -5,7 +5,7 @@ description: 在宿主应用中接入/使用 amis 可视化编辑器（amis-edit
 
 # amis 编辑器宿主接入与使用
 
-依据 docs/zh-CN/extend/editor.md。参考项目：https://github.com/aisuda/amis-editor-demo，在线体验 https://aisuda.github.io/amis-editor-demo
+本 skill 面向宿主应用开发者，**自包含**。完整接入文档已内置：`references/editor.md`（拷贝自 amis 仓库 docs/zh-CN/extend/editor.md，含 React/SDK 两种接入方式全文）；`references/embed-example.tsx` 是文档站的真实宿主接入实现（env 适配、Toast/Alert 弹层、主题切换，可直接参考）。参考项目：https://github.com/aisuda/amis-editor-demo，在线体验 https://aisuda.github.io/amis-editor-demo
 
 ## 选包
 
@@ -33,7 +33,7 @@ description: 在宿主应用中接入/使用 amis 可视化编辑器（amis-edit
 />
 ```
 
-`$schemaUrl` 的 schema.json 由 `npm run build-schemas --workspace amis` 生成（packages/amis/schema.json），部署到静态目录即可。
+`$schemaUrl` 的 schema.json 需要从 amis 源码仓库构建：clone 后 `npm run build-schemas --workspace amis` 产出 `packages/amis/schema.json`，部署到宿主静态目录即可。
 
 ## 常见接入问题
 
@@ -56,10 +56,16 @@ schemaFilter={(schema, isPreview) => {
 
 `onInit`、`onActive`（点选）、`beforeInsert/afterInsert`、`beforeUpdate/afterUpdate`、`beforeReplace`、`beforeMove`、`beforeDelete`、`onDndAccept`（拖拽是否接收）、`onBuildPanels`（干预右侧面板）、`onBuildContextMenus` 等。before 系列返回 false 或 `event.preventDefault()` 可拦截操作。
 
-## 本仓库内开发调试
+## amis 源码仓库内开发调试（可选，仅在有仓库时）
 
 `npm start` 后访问 `http://127.0.0.1:8888/packages/amis-editor/`。
 
 ## 多语言
 
-SDK 传 locale；React 版 import `'amis-editor/lib/locale/en-US'` 之类后 props 传 `locale`。编辑器源码文案的提取/翻译用 `npm run i18n:update` / `i18n:translate`（根 i18nConfig.ts，覆盖 amis-editor 与 amis-editor-core）。
+SDK 传 locale；React 版 import `'amis-editor/lib/locale/en-US'` 之类后 props 传 `locale`。编辑器源码文案的提取/翻译（改源码时）用 `npm run i18n:update` / `i18n:translate`（仓库根 i18nConfig.ts，覆盖 amis-editor 与 amis-editor-core）。
+
+## 内置资料与同步
+
+- `references/editor.md` ← docs/zh-CN/extend/editor.md
+- `references/embed-example.tsx` ← examples/embed.tsx
+- 仓库内更新后同步（在 amis 仓库根执行）：`cp docs/zh-CN/extend/editor.md .claude/skills/amis-editor-usage/references/ && cp examples/embed.tsx .claude/skills/amis-editor-usage/references/embed-example.tsx`

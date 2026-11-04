@@ -5,6 +5,8 @@ description: 编写或修改 amis 组件文档（docs/zh-CN）时使用。触发
 
 # amis 组件文档编写
 
+**前提：本 skill 在 amis 源码仓库内执行**（文档写到 docs/zh-CN/ 并注册进文档站，路径均相对仓库根）。frontmatter、文档结构、schema 代码块规范已全部内嵌本文。
+
 amis 文档的最大特点：**文档即示例**——markdown 里的 ` ```schema ` 代码块会被文档站实时渲染成可交互示例，写文档 = 写可运行的 demo。
 
 ## 文件位置与注册

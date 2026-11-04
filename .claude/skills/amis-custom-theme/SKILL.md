@@ -5,7 +5,7 @@ description: 定制/自定义 amis 主题与样式时使用。触发场景：用
 
 # amis 自定义主题
 
-官方四种定制方式（docs/zh-CN/style/index.md）：CSS 变量、辅助 class（helper.css）、自编译主题 css、wrapper 内嵌 style。**先按需求选路线，不要一上来就复制整套 scss**：
+官方四种定制方式（详见 references/ 下文档）：CSS 变量、辅助 class（helper.css）、自编译主题 css、wrapper 内嵌 style。**先按需求选路线，不要一上来就复制整套 scss**：
 
 ```mermaid
 flowchart TD
@@ -34,9 +34,9 @@ flowchart TD
 }
 ```
 
-宿主侧全局定制直接写 CSS：`:root { --primary: #xxx; }`（动态换肤参考 examples/components/Theme.tsx：把变量写入 `<style>` 标签实时预览）。
+宿主侧全局定制直接写 CSS：`:root { --primary: #xxx; }`（动态换肤思路：把变量键值拼成 `:root {...}` 写入 `<style>` 标签即可实时生效；amis 仓库 examples/components/Theme.tsx 有完整实现）。
 
-- 常用变量：`--primary(-onHover/-onActive)/--success/--info/--warning/--danger/--text-color/--body-bg/--borderColor/--borderRadius/--background`，完整清单 docs/zh-CN/style/css-vars.md。
+- 常用变量：`--primary(-onHover/-onActive)/--success/--info/--warning/--danger/--text-color/--body-bg/--borderColor/--borderRadius/--background`，完整清单 **references/css-vars.md**。
 - 变量三层体系（token → 语义 → 组件）与 cssVars 的安全过滤实现见 **references/scss-and-css-vars.md**。
 
 ## 路线 2：theme() 叠加配置（只改行为，不动样式）
@@ -99,7 +99,7 @@ SCSS 侧（复制 amis-ui 主题文件模式）：
 // 1. 引入目标主题的 JS 注册（内置主题：import 'amis/lib/themes/antd'，源码 import 'amis-ui/lib/themes/antd'）
 // 2. 换 css 引用：<link href=".../lib/themes/antd.css"> 或 import 'amis/lib/themes/antd.css'
 // 3. 渲染时指定：amis.embed('#root', schema, {}, {theme: 'antd'})
-// 4. 弹层类组件需要手动传主题（examples/embed.tsx:285-296）：
+// 4. 弹层类组件需要手动传主题（完整写法见 amis-editor-usage skill 的 references/embed-example.tsx）：
 <ToastComponent theme={env.theme} />
 <AlertComponent theme={env.theme} />
 ```
@@ -114,13 +114,14 @@ SCSS 侧（复制 amis-ui 主题文件模式）：
 
 1. css 引用与 env.theme 是否配套（引了 cxd.css 却传 theme: 'antd' → 类名前缀对不上）
 2. Toast/Alert 弹层组件是否漏传 theme（它们独立于渲染树，要单独传）
-3. 覆盖的变量名是否存在（查 docs/zh-CN/style/css-vars.md 或 _properties.scss）
+3. 覆盖的变量名是否存在（查 references/css-vars.md 或 _properties.scss）
 4. cssVars 的 key 必须以 `--` 开头、值含 `expression(` 或 `;` 会被过滤（防 XSS，Page.tsx:385-411）
 
 ## 深入阅读（references/）
 
 - **references/theme-architecture.md**：theme.tsx 全 API、ThemeConfig、themeable/themeKey 注入机制、Root 渲染链路、内置四主题源码、常见误区
 - **references/scss-and-css-vars.md**：scss 目录全景、三层变量体系、主题文件模板、构建产物链、cssVars 运行时实现、开发规约
+- **references/css-vars.md**：全部 CSS 变量清单（拷贝自 docs/zh-CN/style/css-vars.md，仓库内更新后同步：`cp docs/zh-CN/style/css-vars.md .claude/skills/amis-custom-theme/references/`）
 
 ## 完成检查清单
 

@@ -5,7 +5,7 @@ description: 编写 amis JSON 配置（低代码使用层）时使用。触发�
 
 # 用 amis 写低代码配置（schema）
 
-"使用 amis"而非"开发 amis"。权威文档全在 `docs/zh-CN/`（components/ 每个组件一页、concepts/ 概念、types/ 类型），**写配置前先查对应组件文档，不要凭记忆猜属性**。
+"使用 amis"而非"开发 amis"。本 skill **自包含**，可直接拷贝到任何环境使用。权威文档已内置：`references/docs/`（拷贝自 amis 仓库 docs/zh-CN，components/ 每个组件一页 + concepts/ 概念 + types/ 类型，共 170+ 篇），**写配置前先读对应组件文档，不要凭记忆猜属性**。在 amis 源码仓库内时也可直接读 `docs/zh-CN/`（内容同源，更新更快）。
 
 ## 接入方式
 
@@ -55,7 +55,7 @@ status 非 0 一律按失败处理并 toast msg。简单写法 `"api": "post:/ap
 
 ## 常用组件速查
 
-| 需求 | type | 文档 |
+| 需求 | type | 文档（references/docs/ 下） |
 |---|---|---|
 | 页面容器 | `page`、`container`、`grid`、`flex`、`cards` | components/page.md |
 | 表单 | `form` + `input-text`/`select`/`input-date`/`input-file` 等 | components/form/ |
@@ -69,12 +69,22 @@ status 非 0 一律按失败处理并 toast msg。简单写法 `"api": "post:/ap
 ## 写 schema 的工作流
 
 1. 明确数据来源（initApi/api/source）和交互（事件动作/联动）
-2. 查 docs/zh-CN/components/ 对应组件文档确认属性（属性表 + 顶部示例均可交互参考）
-3. 本地快速验证：`npm start` 的文档站里把示例粘进任意 schema 块实时改；或写最小单测渲染
-4. mock 数据统一用 `/api/mock2/...`（本仓库 mock/ 目录实现，可参考加自己的 mock）
+2. 读 `references/docs/components/` 对应组件文档确认属性（属性表 + 示例 schema 均可参考）；概念不清读 `references/docs/concepts/`
+3. 本地快速验证：浏览器打开 `references/playground.html`（CDN 版 SDK，粘 schema 实时渲染，已开 amisDebug 面板）——**不依赖 amis 仓库**
+4. 若在 amis 源码仓库内：`npm start` 文档站可交互改示例；mock 数据用 `/api/mock2/...`（仓库 mock/ 目录实现）
 
 ## 宿主平台注意
 
 - 老配置升级有 compat 层自动转（amis-core/src/compat.ts）
 - 全局文本替换：env `replaceText: {KEY: 'value'}`（1.5.0+），排除字段用 `replaceTextIgnoreKeys`
 - 多语言：props 传 `locale`，React 版需自行 import 语言包（如 `'amis-ui/lib/locale/en-US'`）
+
+## 内置资料与同步
+
+- `references/docs/`：拷贝自 amis 仓库 `docs/zh-CN/{components,concepts,types,start}`
+- `references/playground.html`：独立验证页（CDN SDK，需联网）
+- 仓库内更新文档后同步副本（在 amis 仓库根执行）：
+
+```bash
+cp -R docs/zh-CN/components docs/zh-CN/concepts docs/zh-CN/types .claude/skills/amis-schema/references/docs/ && cp docs/zh-CN/start/getting-started.md docs/zh-CN/start/faq.md .claude/skills/amis-schema/references/docs/start/
+```

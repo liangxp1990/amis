@@ -57,7 +57,7 @@ amis.render/embed(schema, props, env)      amis-core/src/index.tsx:379-382
 
 ## 3. 内置主题源码（packages/amis-ui/src/themes/，.ts 非 .tsx）
 
-注册入口：`packages/amis-ui/src/index.tsx:7-11` 依次 `import './themes/{cxd,ang,antd,dark,default}'`（宿主引 `amis/lib/themes/antd` 即触发，见 examples/embed.tsx:20-23）。
+注册入口：`packages/amis-ui/src/index.tsx:7-11` 依次 `import './themes/{cxd,ang,antd,dark,default}'`（宿主引 `amis/lib/themes/antd` 即触发，同上范本顶部 import 区）。
 
 | 主题 | classPrefix | 内容要点 |
 |---|---|---|
@@ -79,5 +79,5 @@ amis.render/embed(schema, props, env)      amis-core/src/index.tsx:379-382
 1. **"schema 里配 theme 属性"** —— 不存在；page 只有 `cssVars`（CSS 变量覆盖，Page.tsx:385-411）。
 2. **"antd 主题 = antd 组件替换"** —— 不是，只是 classPrefix + 默认 props + CSS 变量换肤。
 3. **"存在 makeTheme/ThemeProvider"** —— 不存在，见 §1。
-4. **弹层不跟随主题** —— Toast/Alert 是独立 React 树，必须手动 `<ToastComponent theme={env.theme}>`（examples/embed.tsx:285-296）。
+4. **弹层不跟随主题** —— Toast/Alert 是独立 React 树，必须手动 `<ToastComponent theme={env.theme}>`（完整范本见 amis-editor-usage skill 的 references/embed-example.tsx）。
 5. **改默认 props 想找 setTheme** —— 用 `theme('mytheme', {...})` 注册 + `setDefaultTheme('mytheme')` 或渲染时 env.theme 指定。

@@ -5,7 +5,7 @@ description: 在 amis 仓库新增渲染器组件（普通渲染器/表单项/�
 
 # 新增 amis 渲染器组件
 
-依据 docs/zh-CN/extend/contribute.md（avatar 实战）与 docs/zh-CN/extend/custom-react.md。核心原则：**先看 renderers/ 里最像的现有组件抄结构，不要从零发明**（常见组件走读见 references/component-walkthrough.md）。
+**前提：本 skill 在 amis 源码仓库内执行**（任务是改仓库源码，文中 packages/ 路径均相对仓库根）。知识文档已内置：完整实战见 `references/contribute.md`（avatar 组件从零到一）、装饰器用法见 `references/custom-react.md`。核心原则：**先看 renderers/ 里最像的现有组件抄结构，不要从零发明**（常见组件走读见 references/component-walkthrough.md）。
 
 ## 0. 路径速查（v6 重构后的真实位置，旧博客/旧文档很多是错的）
 
@@ -191,6 +191,7 @@ registerRenderer({
 
 - **references/renderer-mechanisms.md**：三个装饰器注入 props 全清单、注册/查找/weight 机制、事件系统、Scoped 数据域、themeable
 - **references/component-walkthrough.md**：Alert（最简展示）/ Action（交互+alias 多注册）/ InputText（表单壳+五类事件）/ Radios（OptionsControl 范本）/ Flex（容器 render 模式）真实源码走读
+- **references/contribute.md / references/custom-react.md**：拷贝自 docs/zh-CN/extend/，仓库内更新后同步：`cp docs/zh-CN/extend/contribute.md docs/zh-CN/extend/custom-react.md .claude/skills/amis-new-renderer/references/`
 
 ## 完成检查清单
 
