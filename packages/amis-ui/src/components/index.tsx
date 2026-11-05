@@ -33,6 +33,7 @@ import Editor from './Editor';
 import DiffEditor from './DiffEditor';
 import Html from './Html';
 export * from './icons';
+export * from './Chat';
 import * as Icons from './icons';
 import Layout from './Layout';
 import {LazyComponent} from 'amis-core';

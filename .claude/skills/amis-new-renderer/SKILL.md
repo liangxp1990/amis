@@ -187,6 +187,8 @@ registerRenderer({
 3. **Schema 属性命名避让**：`mode` 是表单布局属性（horizontal/inline/normal），组件自己的"形态"类属性必须换名（如 `displayMode`），否则类型不兼容。
 4. **组件动作**：组件实现 `doAction(action, data, throwErrors)` 分发自定义动作（如 open/refresh/clear/reset）；动作链调用写法是 `{"actionType": "<动作名>", "componentId": "xxx"}`——**不是** `{actionType:'component', args:{action:'xxx'}}`（v6 无 args.action 处理，永不进目标分支）。编辑器插件 actions 数组同步登记才出现在动作面板。
 5. **H5 自适应模式**：交互型图形控件用 `width + maxWidth:'100%' + aspectRatio` 替代固定高度；坐标/几何换算一律按渲染时 `offsetWidth/offsetHeight` 动态计算（jsdom 里恒为 0，测试需 `Object.defineProperty` mock），任意显示尺寸下数学自洽。触摸交互用 pointer 事件（`touch-action:none` 防滚动劫持）+ mouse 事件兜底（双绑定需防重复：会话存在即 return）。
+6. **Schema 字段名 `context` 是保留字**（ai-chat 组件实证）：RootRenderer 向所有渲染器下发 `context: store.context`（amis 顶层"上下文"概念），schema 里叫 `context` 的字段会被同名覆盖、值恒为 `{}`——自定义业务上下文字段必须换名（如 `agentContext`）。排查这类"字段到了组件变空对象"的问题，先查 RENDERER_TRANSMISSION_OMIT_PROPS 与 RootRenderer 的强制下发 props。
+7. **env 新增能力点用可选字段 + 内置默认实现**（ai-chat 的 `env.aguiFetcher` 实证）：fetcher 契约是"一次性完整响应"，SSE 持续回调类能力（流式）不要塞进 fetcher——在 RendererEnv 上加**可选**扩展点（宿主零改造可用，需鉴权/网关时覆盖），组件内部带默认实现并允许 props 注入覆盖（`props.fetcher ?? env.aguiFetcher ?? defaultImpl`）。UI 核心实现放 amis-ui 保持"普通 React 组件可用"，渲染器只做 schema→props 薄壳，一份实现两个出口。
 
 ## 深入阅读（references/）
 

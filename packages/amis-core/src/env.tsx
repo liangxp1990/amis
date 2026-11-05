@@ -20,6 +20,7 @@ import type {IScopedContext} from './Scoped';
 import type {RendererEvent} from './utils/renderer-event';
 import type {ListenerContext} from './actions/Action';
 import type {ICmptAction} from './actions/CmptAction';
+import type {AguiFetchCallbacks, AguiFetchHandle, RunAgentInput} from './ai';
 import {AMISPageMeta} from './schema';
 
 export interface WsObject {
@@ -33,6 +34,17 @@ export interface RendererEnv {
   forceSilenceInsideError?: boolean;
   session?: string;
   fetcher: (api: Api, data?: any, options?: object) => Promise<Payload>;
+  /**
+   * AG-UI 协议(ai-chat 组件)的可选流式请求适配点。
+   * 不提供时使用内置默认实现(同源 fetch + SSE);宿主需要统一
+   * 鉴权/网关/跨域时覆盖。SSE 是持续回调,与 fetcher 的一次性
+   * 响应契约不同,故独立扩展点。
+   */
+  aguiFetcher?: (
+    endpoint: string,
+    input: RunAgentInput,
+    callbacks: AguiFetchCallbacks
+  ) => AguiFetchHandle;
   isCancel: (val: any) => boolean;
   wsFetcher: (
     ws: WsObject,

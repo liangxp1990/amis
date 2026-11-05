@@ -1,6 +1,7 @@
 import {AMISPageSchema} from './renderers/Page';
 import {AMISButtonSchema, AMISFormSchema} from 'amis-core';
 import {AMISAlertSchema} from './renderers/Alert';
+import {AMISAIChatSchema} from './renderers/AIChat';
 import {AMISFlexSchema} from './renderers/Flex';
 import {AMISTplSchema} from './renderers/Tpl';
 import {AMISRemarkSchema} from './renderers/Remark';
@@ -156,6 +157,8 @@ declare module 'amis-core' {
     'form': AMISFormSchema;
     /** 警告提示组件，用于显示重要信息或警告 */
     'alert': AMISAlertSchema;
+    /** AI 对话组件(AG-UI 协议),消息流/流式输出/工具调用/数据域联动 */
+    'ai-chat': AMISAIChatSchema;
     /** 应用容器组件，提供全局配置和布局 */
     'app': AMISAppSchema;
     /** 音频播放器组件，支持多种音频格式 */

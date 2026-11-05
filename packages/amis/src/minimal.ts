@@ -20,6 +20,12 @@ registerRenderer({
   getComponent: () => import('./renderers/Alert')
 });
 
+// import './renderers/AIChat';
+registerRenderer({
+  type: 'ai-chat',
+  getComponent: () => import('./renderers/AIChat')
+});
+
 // import './renderers/App';
 registerRenderer({
   type: 'app',

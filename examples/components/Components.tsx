@@ -1008,6 +1008,13 @@ export const components = [
         )
       },
       {
+        label: 'AI 对话',
+        path: '/zh-CN/components/ai-chat',
+        component: React.lazy(() =>
+          import('../../docs/zh-CN/components/ai-chat.md').then(wrapDoc)
+        )
+      },
+      {
         label: 'OfficeViewer Word 渲染',
         path: '/zh-CN/components/office-viewer',
         component: React.lazy(() =>

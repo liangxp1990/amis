@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>amis AI Chat 低代码组件技术方案</title>
+<style>
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;max-width:1080px;margin:0 auto;padding:32px 24px;color:#1f2328;line-height:1.7}
+  h1{font-size:26px;border-bottom:2px solid #4a6cf7;padding-bottom:10px}
+  h2{font-size:20px;margin-top:40px;border-left:4px solid #4a6cf7;padding-left:10px}
+  h3{font-size:16px;margin-top:24px}
+  table{border-collapse:collapse;width:100%;margin:12px 0;font-size:13px}
+  th,td{border:1px solid #d0d7de;padding:6px 10px;text-align:left;vertical-align:top}
+  th{background:#f6f8fa}
+  code{background:#f0f2f5;padding:1px 5px;border-radius:3px;font-size:13px}
+  pre{background:#0d1117;color:#e6edf3;padding:14px;border-radius:8px;overflow-x:auto;font-size:12.5px;line-height:1.6}
+  pre code{background:none;padding:0}
+  .decision{background:#f0f6ff;border:1px solid #b6d4fe;border-radius:8px;padding:12px 16px;margin:14px 0}
+  .decision b{color:#0b4fc4}
+  .warn{background:#fff8e6;border:1px solid #f5d97a;border-radius:8px;padding:10px 16px;margin:12px 0}
+  .svg-box{text-align:center;margin:20px 0;background:#fafbfc;border:1px solid #e5e9ef;border-radius:8px;padding:16px}
+  .svg-box figcaption{font-size:13px;color:#57606a;margin-top:8px}
+  .p0{color:#c0392b;font-weight:600}
+  .p1{color:#b7791f;font-weight:600}
+  .p2{color:#5a67d8;font-weight:600}
+</style>
+</head>
+<body>
+
+<h1>amis AI Chat 低代码组件技术方案</h1>
+
+<h2>1. 背景与定位</h2>
+<p>目标:在 amis 中新增 <code>ai-chat</code> 渲染器,让低代码用户通过 JSON 配置即可得到一个完整的 AI 对话组件(消息流 / 流式输出 / 工具调用可视化 / 思考过程 / 数据域联动),对接任何 AG-UI 协议后端。<b>同一个实现同时以普通 React 组件形式对外发布</b>(见 D6),脱离 amis 渲染上下文也可 <code>&lt;Chat endpoint="..." /&gt;</code> 直接使用。</p>
+<p>与 <code>docs/design.html</code>(amis-editor AI Agent 方案)的关系:<b>同一后端,两个消费端</b>。design.html 是"编辑器内 Copilot"(Agent 修改 schema,面向开发者);本方案是"页面级 chat 组件"(面向最终用户页面的通用对话能力)。二者复用同一个 AG-UI 协议层与同一个后端 <code>amis-agent-starter</code>(POST <code>/amis-agent/chat</code>,SSE 事件流)。</p>
+
+<h2>2. 业界参考与取舍</h2>
+<table>
+  <tr><th>参考</th><th>值得吸收</th><th>不能照搬的原因</th></tr>
+  <tr>
+    <td>Semi Design Chat</td>
+    <td>概念模型:<code>Message</code>(role/content/status)、<code>roleConfig</code>、<code>mode</code>(bubble/noBubble)、hints 提示、SSE 受控更新、stopGenerator、消息操作回调(复制/反馈/重发)</td>
+    <td rowspan="2">amis-ui 是零第三方 UI 依赖的纯组件库 + CSS 变量三层主题体系(SUIT 命名);引入外部组件库会带入整棵依赖树与第二套主题/样式体系,破坏多主题(cxd/antd/ang/dark)能力</td>
+  </tr>
+  <tr>
+    <td>TDesign react-chat</td>
+    <td><code>ChatStreamer</code> 思路:SSE 增量 append + 分片渲染防长文卡顿;思考过程(reasoning)折叠展示</td>
+  </tr>
+  <tr>
+    <td>CopilotKit</td>
+    <td>Agent 框架分层概念(CopilotKitProvider / runtime / useCopilotChat);AG-UI 协议正是其主推的传输标准</td>
+    <td>它是 Next.js 代码优先的应用框架,方向与"JSON 配置生成页面"相反;onboarding 页面实际是让编码 agent 在当前目录执行 <code>npx copilotkit onboard</code> 脚手架命令,不能在 amis 仓库执行</td>
+  </tr>
+  <tr>
+    <td>assistant-ui</td>
+    <td>Runtime 抽象层(协议与 UI 分离)分层方式</td>
+    <td>同上;且默认样式依赖 Tailwind</td>
+  </tr>
+</table>
+
+<h2>3. 关键设计决策</h2>
+<div class="decision"><b>D1 · UI 完全自研,不引入任何 chat 组件库。</b>仅吸收上表概念模型。amis-ui 已有 Markdown 组件可直接复用为消息内容渲染器;自研件纳入 CSS 变量主题体系,四主题自动适配。</div>
+<div class="decision"><b>D2 · 协议绑定 AG-UI 标准(16 类标准事件)。</b>后端 <code>amis-agent-starter</code> 已按 AG-UI(SSE)实现。前端按标准事件模型实现(RUN_* / TEXT_MESSAGE_* / TOOL_CALL_* / STATE_SNAPSHOT / STATE_DELTA / MESSAGES_SNAPSHOT / CUSTOM / RAW),不私有扩展;未知事件类型静默忽略并 console.warn,保证前向兼容。</div>
+<div class="decision"><b>D3 · 请求能力走 env 扩展点 <code>env.aguiFetcher</code>,并内置默认实现。</b>原因:amis 自身不发请求,全走 env;<code>env.fetcher</code> 的契约是"一次性完整响应(Promise&lt;Payload&gt;)",SSE 是持续回调,硬塞会破坏所有宿主的 fetcher 实现。新增<b>可选</b> env 扩展点(签名:<code>aguiFetcher(endpoint, input, callbacks) =&gt; {abort}</code>,callbacks 含 onEvent/onError/onDone),默认实现用原生 fetch + ReadableStream——宿主零改造即可用,需要统一鉴权/网关时覆盖即可。与 <code>enableAMISDebug</code> 一致的全局开关可打印事件流日志。</div>
+<div class="decision"><b>D4 · AG-UI 协议层放 amis-core(新目录 <code>src/ai/</code>),不放 amis。</b>协议解码与事件归并是纯逻辑、零 UI 依赖;且 design.html 的"编辑器 Copilot 面板"是第二个消费端,放 core 一处实现两端复用。<b>不建 MST store</b>:消息状态用组件内 <code>useReducer(src/ai/reducer.ts 纯函数)</code>——流式高频更新下 MST 事务是负担,消息列表也无需进数据域;<code>renderer</code> 无 storeType 一样工作,STATE_DELTA 才是数据域联动通道(见 D5)。</div>
+<div class="decision"><b>D5 · chat 是数据链的一环,不是孤岛。</b>发送时从当前数据域组装 <code>RunAgentInput.context/state</code>;收到 <code>STATE_SNAPSHOT/STATE_DELTA</code>(JSON Patch)时写回数据域,页面其他组件(表格/表单)实时联动;消息完成/出错派发 amis 事件(onEvent),可接任意动作。这是"低代码 chat"与"普通聊天组件"的本质差异。</div>
+<div class="decision"><b>D6 · 实现一份,出口两个(普通 React 组件 + amis 渲染器)。</b>核心实现在 amis-ui 的 <code>&lt;Chat&gt;</code> 组合件:themeable 纯 React 组件,内部完成协议接线(直接用 src/ai 的 runAgent 默认实现,或由 props 注入 <code>fetcher</code>),<b>禁止出现任何 amis 渲染上下文依赖</b>(render/env/数据域)。<br>
+&nbsp;&nbsp;出口 A · 普通 React:<code>import \{ Chat \} from 'amis-ui'</code> + 主题 css,开箱即用,请求不走 env(这正是 D3 把默认实现放协议层的原因);<br>
+&nbsp;&nbsp;出口 B · amis 渲染器:<code>AIChat.tsx</code> 是薄壳——schema→props 映射、注入 <code>env.aguiFetcher</code>、组装数据域 context、STATE 回写数据域、dispatchEvent。壳不写 UI。</div>
+
+<h2>4. 总体架构</h2>
+<figure class="svg-box">
+<svg width="960" height="560" viewBox="0 0 960 560" xmlns="http://www.w3.org/2000/svg" font-family="PingFang SC,Microsoft YaHei,sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#4a6cf7"/></marker>
+  </defs>
+
+  <!-- amis 包 -->
+  <rect x="20" y="16" width="920" height="330" rx="12" fill="#f0f6ff" stroke="#b6d4fe" stroke-width="1.5"/>
+  <text x="40" y="42" font-size="14" font-weight="bold" fill="#0b4fc4">amis monorepo</text>
+
+  <!-- amis-editor -->
+  <rect x="45" y="60" width="200" height="110" rx="8" fill="#fff" stroke="#9aa4b2" stroke-width="1.5" stroke-dasharray="6 3"/>
+  <text x="65" y="86" font-size="13" font-weight="bold">amis-editor(P2)</text>
+  <text x="65" y="108" font-size="12" fill="#57606a">· ai-chat 可视化配置插件</text>
+  <text x="65" y="128" font-size="12" fill="#57606a">· 全控件化,禁止手输 JSON</text>
+  <text x="65" y="148" font-size="12" fill="#57606a">· 端点/角色/提示语/联动</text>
+
+  <!-- amis 渲染器 -->
+  <rect x="280" y="60" width="250" height="110" rx="8" fill="#fff" stroke="#4a6cf7" stroke-width="1.5"/>
+  <text x="300" y="86" font-size="13" font-weight="bold">amis:ai-chat 渲染器(薄壳)</text>
+  <text x="300" y="108" font-size="12" fill="#57606a">· AMISAIChatSchema(JSON 配置)</text>
+  <text x="300" y="128" font-size="12" fill="#57606a">· onEvent:sendMessage/finish/error</text>
+  <text x="300" y="148" font-size="12" fill="#57606a">· context ← 数据域 / STATE → 数据域</text>
+
+  <!-- amis-ui -->
+  <rect x="565" y="60" width="200" height="110" rx="8" fill="#fff" stroke="#4a6cf7" stroke-width="1.5"/>
+  <text x="585" y="86" font-size="13" font-weight="bold">amis-ui:Chat 组合件 ★</text>
+  <text x="585" y="106" font-size="11.5" fill="#57606a">普通 React 入口:&lt;Chat endpoint fetcher /&gt;</text>
+  <text x="585" y="124" font-size="11.5" fill="#57606a">· 内部 useReducer 接协议层(零 amis 依赖)</text>
+  <text x="585" y="142" font-size="11.5" fill="#57606a">· ChatMessage/ChatInput/ToolCallCard</text>
+  <text x="585" y="160" font-size="11.5" fill="#57606a">/ThinkingBlock,复用 Markdown</text>
+
+  <!-- amis-core -->
+  <rect x="45" y="200" width="440" height="126" rx="8" fill="#fff" stroke="#2a9d5c" stroke-width="1.5"/>
+  <text x="65" y="226" font-size="13" font-weight="bold" fill="#1c6b43">amis-core:src/ai/(协议层 + 事件归并,纯逻辑,无 MST)</text>
+  <text x="65" y="248" font-size="12" fill="#57606a">· types.ts:AG-UI 事件与 RunAgentInput 类型</text>
+  <text x="65" y="268" font-size="12" fill="#57606a">· decoder.ts:SSE chunk → 标准事件(容错:半包/心跳/非 JSON 行)</text>
+  <text x="65" y="288" font-size="12" fill="#57606a">· agent.ts:runAgent(endpoint,input,onEvent) + AbortController</text>
+  <text x="65" y="308" font-size="12" fill="#57606a">· reducer.ts:事件归并成 UI 消息模型(纯函数,可单测)</text>
+
+  <!-- env -->
+  <rect x="565" y="200" width="375" height="126" rx="8" fill="#fffaf0" stroke="#f5d97a" stroke-width="1.5"/>
+  <text x="585" y="226" font-size="13" font-weight="bold" fill="#8a6d1a">env 扩展点:aguiFetcher(可选,D3)</text>
+  <text x="585" y="248" font-size="12" fill="#57606a">· 默认实现:fetch + ReadableStream 解析 SSE</text>
+  <text x="585" y="268" font-size="12" fill="#57606a">· 宿主可覆盖:统一鉴权 / 网关 / 代理</text>
+  <text x="585" y="288" font-size="12" fill="#57606a">· callbacks:{onEvent,onError,onDone}</text>
+  <text x="585" y="308" font-size="12" fill="#57606a">· 返回 {abort()}:组件"停止生成"</text>
+
+  <!-- 编辑器->渲染器 -->
+  <line x1="245" y1="115" x2="278" y2="115" stroke="#4a6cf7" stroke-width="1.5" marker-end="url(#arr)"/>
+  <!-- 渲染器->ui -->
+  <line x1="530" y1="115" x2="563" y2="115" stroke="#4a6cf7" stroke-width="1.5" marker-end="url(#arr)"/>
+  <!-- 渲染器->core -->
+  <line x1="405" y1="170" x2="300" y2="198" stroke="#4a6cf7" stroke-width="1.5" marker-end="url(#arr)"/>
+  <!-- core->env -->
+  <line x1="485" y1="263" x2="563" y2="263" stroke="#4a6cf7" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- 后端 -->
+  <rect x="20" y="380" width="920" height="80" rx="12" fill="#f0fff6" stroke="#9adbb7" stroke-width="1.5"/>
+  <text x="40" y="408" font-size="14" font-weight="bold" fill="#1c6b43">后端:amis-agent-starter(已有)</text>
+  <text x="40" y="432" font-size="12" fill="#57606a">POST /amis-agent/chat · AG-UI RunAgentInput → SSE 事件流(RUN_* / TEXT_MESSAGE_* / TOOL_CALL_* / STATE_*)· 任何 AG-UI 兼容后端(LangGraph/Agno/自研)均可替换</text>
+  <line x1="750" y1="326" x2="750" y2="378" stroke="#2a9d5c" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="762" y="358" font-size="12" fill="#2a9d5c">SSE 流</text>
+
+  <text x="40" y="500" font-size="13" fill="#57606a">图例:实线=依赖/调用(P0 即有),虚线=P2 后期;绿色=跨进程边界,黄色=宿主适配层</text>
+</svg>
+<figcaption>图 1 · ai-chat 组件分层架构</figcaption>
+</figure>
+
+<h2>5. 配置模型(Schema)</h2>
+<pre><code>{
+  "type": "ai-chat",
+  "endpoint": "/amis-agent/chat",        // AG-UI 端点,支持 ${xxx} 模板
+  "title": "智能助手",
+  "welcome": "你好,我是页面助手",          // 可为富文本 markdown
+  "hints": ["帮我总结数据", "生成周报"],   // 空态提示语,点击即发送
+  "roles": {                              // 对应 Semi roleConfig 概念
+    "user":      { "name": "我",       "avatar": "...", "color": "blue" },
+    "assistant": { "name": "助手",     "avatar": "..." }
+  },
+  "mode": "bubble",                       // bubble | noBubble | userBubble
+  "agentContext": {                       // 发送时从数据域组装(D5)
+    "pageData": "${PAGE_DATA}",           // 任意数据映射,进 RunAgentInput.context
+    "userId": "${user.id}"
+  },
+  "stateKey": "chatState",                // STATE_SNAPSHOT/DELTA 写回数据域的 key
+  "features": {
+    "showThinking": true,                 // 思考过程折叠块
+    "showToolCalls": true,                // 工具调用卡片(名称/参数/结果/状态)
+    "showStop": true,                     // 停止生成
+    "feedback": true,                     // 点赞点踩(onEvent 可上报)
+    "sendHotKey": "enter"                 // enter | shift+enter
+  },
+  "onEvent": {                            // 标准 amis 事件动作
+    "finish":    { "actions": [{ "actionType": "toast", ... }] },
+    "error":     { "actions": [...] },
+    "sendMessage": { "actions": [...] }
+  }
+}</code></pre>
+<p>UI 消息模型内部对齐 Semi 的 <code>Message</code> 概念并扩展 agent 语义:<code>{ id, role, content, status: loading|streaming|complete|error, thinking?, toolCalls?: [{name,args,state,result}] }</code>。消息状态由 Chat 组合件内部 <code>useReducer</code> 管理(reducer 为 <code>src/ai/reducer.ts</code> 纯函数),不建 MST store、无 storeType——流式高频更新不触发整页重渲,STATE 联动走回调而非 store(见 D4/D6)。</p>
+
+<h2>6. 协议与数据流</h2>
+<figure class="svg-box">
+<svg width="960" height="470" viewBox="0 0 960 470" xmlns="http://www.w3.org/2000/svg" font-family="PingFang SC,Microsoft YaHei,sans-serif">
+  <defs>
+    <marker id="arr2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#4a6cf7"/></marker>
+    <marker id="arrg2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#2a9d5c"/></marker>
+  </defs>
+  <!-- 泳道 -->
+  <line x1="120" y1="30" x2="120" y2="440" stroke="#d0d7de" stroke-width="1"/>
+  <line x1="380" y1="30" x2="380" y2="440" stroke="#d0d7de" stroke-width="1"/>
+  <line x1="640" y1="30" x2="640" y2="440" stroke="#d0d7de" stroke-width="1"/>
+  <line x1="870" y1="30" x2="870" y2="440" stroke="#d0d7de" stroke-width="1"/>
+  <text x="120" y="22" font-size="13" font-weight="bold" text-anchor="middle">用户/渲染器</text>
+  <text x="380" y="22" font-size="13" font-weight="bold" text-anchor="middle">协议层(src/ai)</text>
+  <text x="640" y="22" font-size="13" font-weight="bold" text-anchor="middle">Chat 组件(useReducer)</text>
+  <text x="870" y="22" font-size="13" font-weight="bold" text-anchor="middle">amis-agent-starter</text>
+
+  <line x1="870" y1="30" x2="870" y2="440" stroke="none"/>
+  <!-- 1 输入 -->
+  <rect x="30" y="50" width="180" height="34" rx="6" fill="#e7f0ff"/>
+  <text x="120" y="72" font-size="12" text-anchor="middle">用户输入 → onSendMessage</text>
+  <!-- 2 组装 -->
+  <rect x="30" y="106" width="180" height="46" rx="6" fill="#fff" stroke="#4a6cf7"/>
+  <text x="120" y="125" font-size="11.5" text-anchor="middle">数据域取 context →</text>
+  <text x="120" y="142" font-size="11.5" text-anchor="middle">乐观插入 user 消息 + loading</text>
+  <line x1="212" y1="128" x2="316" y2="128" stroke="#4a6cf7" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <!-- 3 runAgent -->
+  <rect x="285" y="106" width="190" height="46" rx="6" fill="#fff" stroke="#4a6cf7"/>
+  <text x="380" y="125" font-size="11.5" text-anchor="middle">runAgent(endpoint,</text>
+  <text x="380" y="142" font-size="11.5" text-anchor="middle">RunAgentInput, onEvent) + abort</text>
+  <line x1="477" y1="128" x2="836" y2="128" stroke="#4a6cf7" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <text x="650" y="120" font-size="11" fill="#57606a">POST · SSE 建流</text>
+  <!-- 4 事件流 -->
+  <line x1="836" y1="210" x2="497" y2="210" stroke="#2a9d5c" stroke-width="1.5" marker-end="url(#arrg2)"/>
+  <text x="650" y="202" font-size="11" fill="#2a9d5c">SSE data: {...} 持续事件流</text>
+  <!-- 5 decoder -->
+  <rect x="285" y="188" width="212" height="56" rx="6" fill="#fff" stroke="#2a9d5c"/>
+  <text x="391" y="208" font-size="11.5" text-anchor="middle">decoder:chunk 拼帧 → 事件对象</text>
+  <text x="391" y="226" font-size="11" text-anchor="middle" fill="#57606a">容错:半包/多事件一帧/心跳注释行</text>
+  <text x="391" y="240" font-size="11" text-anchor="middle" fill="#57606a">未知 type 忽略 + warn</text>
+  <!-- 6 归并 -->
+  <line x1="497" y1="260" x2="612" y2="260" stroke="#4a6cf7" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <rect x="615" y="232" width="220" height="72" rx="6" fill="#fff" stroke="#4a6cf7"/>
+  <text x="725" y="252" font-size="11.5" text-anchor="middle">事件归并进消息模型:</text>
+  <text x="725" y="269" font-size="11" text-anchor="middle">TEXT_MESSAGE_* → 追加 content(流式)</text>
+  <text x="725" y="285" font-size="11" text-anchor="middle">TOOL_CALL_* → toolCalls 卡片状态机</text>
+  <text x="725" y="300" font-size="11" text-anchor="middle">STATE_DELTA → JSON Patch 应用</text>
+  <!-- 7 渲染 -->
+  <line x1="612" y1="330" x2="136" y2="330" stroke="#4a6cf7" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <text x="370" y="322" font-size="11" fill="#57606a">observer 订阅,分片渲染(长文不卡)</text>
+  <rect x="30" y="312" width="180" height="36" rx="6" fill="#e7f0ff"/>
+  <text x="120" y="334" font-size="11.5" text-anchor="middle">UI:气泡/思考/工具卡 实时更新</text>
+  <!-- 8 state 写回 -->
+  <line x1="612" y1="380" x2="136" y2="380" stroke="#2a9d5c" stroke-width="1.5" marker-end="url(#arrg2)"/>
+  <text x="370" y="372" font-size="11" fill="#2a9d5c">STATE_SNAPSHOT/DELTA → 数据域(stateKey) → 页面组件联动</text>
+  <!-- 9 finish -->
+  <rect x="285" y="408" width="220" height="34" rx="6" fill="#fff" stroke="#4a6cf7"/>
+  <text x="395" y="430" font-size="11.5" text-anchor="middle">RUN_FINISHED/ERROR → dispatchEvent</text>
+  <line x1="497" y1="425" x2="136" y2="425" stroke="#4a6cf7" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <text x="300" y="417" font-size="11" fill="#57606a">onEvent finish/error → amis 动作链</text>
+</svg>
+<figcaption>图 2 · 一次对话的端到端时序(含状态回写与事件派发)</figcaption>
+</figure>
+
+<h2>7. 组件拆分与落点</h2>
+<table>
+  <tr><th>包</th><th>新增文件</th><th>内容</th><th>期</th></tr>
+  <tr><td rowspan="4">amis-core</td>
+    <td><code>src/ai/types.ts</code></td><td>AG-UI 事件类型与 <code>RunAgentInput</code>(协议常量、类型守卫)</td><td class="p0">P0</td></tr>
+  <tr><td><code>src/ai/decoder.ts</code></td><td>SSE 字节流→事件对象,纯函数</td><td class="p0">P0</td></tr>
+  <tr><td><code>src/ai/fetcher.ts</code></td><td>defaultAguiFetcher(同源 fetch + ReadableStream,可被 props/env 双向注入 + abort)</td><td class="p0">P0</td></tr>
+  <tr><td><code>src/ai/reducer.ts</code></td><td>事件归并成 UI 消息模型 + applyJsonPatch(纯函数,可单测)</td><td class="p0">P0</td></tr>
+  <tr><td rowspan="3">amis-ui</td>
+    <td><code>src/components/Chat/Chat.tsx</code></td><td><b>组合件(普通 React 入口)</b>:props 驱动,useReducer 接协议层,零 amis 渲染依赖</td><td class="p0">P0</td></tr>
+  <tr><td><code>ChatMessage / ChatInput / ChatLoader</code></td><td>零件(气泡+Markdown 复用),亦可单独导出使用</td><td class="p0">P0</td></tr>
+  <tr><td><code>ChatToolCall.tsx</code></td><td>工具卡片(运行中/成功/失败/展开参数结果)</td><td class="p1">P1</td></tr>
+  <tr><td><code>ChatThinking.tsx</code> + <code>_chat.scss</code></td><td>思考折叠块;样式入 CSS 变量体系</td><td class="p1">P1</td></tr>
+  <tr><td rowspan="3">amis</td>
+    <td><code>src/renderers/AIChat.tsx</code></td><td>@Renderer({type:'ai-chat'}) + AMISAIChatSchema + onEvent</td><td class="p0">P0</td></tr>
+  <tr><td><code>SchemaFull.ts</code> / <code>minimal.ts</code></td><td>类型登记 + 异步注册(标准流程)</td><td class="p0">P0</td></tr>
+  <tr><td><code>__tests__/renderers/aiChat.test.tsx</code></td><td>mock SSE 流:流式渲染/停止/错误/state 回写</td><td class="p0">P0</td></tr>
+  <tr><td>amis-editor</td><td><code>src/plugin/AIChat.tsx</code></td><td>可视化配置面板(端点选择/角色/提示语/事件联动,全部控件化)</td><td class="p2">P2</td></tr>
+</table>
+
+<h2>8. 分期计划</h2>
+<div class="decision"><b>实施记录(P0 已完成,2026-11-05)</b>①schema 字段 <code>context</code> 更名为 <code>agentContext</code>——amis 顶层 render props 保留 <code>context</code>(RootRenderer 下发 store.context,同名会被覆盖);②<code>agent.ts</code> 实现为 <code>fetcher.ts</code>(导出 defaultAguiFetcher);③amis-editor-core 的 RAW_TYPE_MAP 因 SchemaType 联合扩大补了兜底索引签名。测试:协议层 13/13、渲染器 6/6;演示页 examples/ai-chat-demo.html(双形态 + mock AG-UI 事件流)已通过 headless 浏览器端到端验证(含思考/工具卡/markdown 表格/0 控制台错误)。<br><b>P2 编辑器插件已完成(同日)</b>:<code>amis-editor/src/plugin/AIChat.tsx</code>,面板全控件化(端点/欢迎语/提示语数组/角色/上下文映射 combo/功能开关/布局/事件面板,零 JSON 手输);<code>agentContext</code> 兼容编辑器 combo 键值数组格式(渲染器归一化);headless 验证:组件面板可见可添加、画布渲染、属性面板配置项齐全。<br><b>真实后端联调完成(同日,amis-agent-starter @18090 + GLM)</b>:curl 实测事件流 + demo 页经 vite proxy 全链路验证(markdown 流式/工具卡/0 控制台错误)。联调修正三处:①后端 RunAgentInput 要求 <code>runId</code> 非空,前端发送时补充;②<code>RUN_FINISHED.outcome.type==='interrupt'</code>(前端工具挂起-恢复模式)时工具卡保持等待态而非误标成功;③Icon 组件 class 直接落在 svg 上(无 wrapper),工具卡图标尺寸选择器写成后代选择器不命中导致图标 118px 撑爆布局——改为写 svg 自身。注:<b>思考模式真实链路已全通(同日,依据官方文档修正前期误判)</b>——①agentscope 事件层命名是 <code>REASONING_*</code> 而非 <code>THINKING_*</code>,前端已双命名兼容;②amis-agent-starter 加 <code>amis-agent.llm.thinking</code> 开关,一路打通:模型请求体 thinking 参数(additionalBodyParams,本地回显截获证实) + <code>AguiAdapterConfig.enableReasoning(true)</code>(此前缺失的关键开关,默认 false,starter 的 AguiRequestProcessor 构建时按 llm.thinking 联动注入);③真实 GLM 流实测:REASONING_MESSAGE_CONTENT 210 条流式增量 + 正文 + 终态,浏览器端到端验证思考块流式展开→完成后收起→正文回答,渲染正常。测试累计 22/22。前端工具执行器(get_schema/apply_changes 挂起后的回传恢复)属编辑器 Copilot 方案(design.html)职责,页面级 chat 组件不承担;HITL 恢复的官方路径(resume[] + interruptId)见 agentscope 文档,后续编辑器 Copilot 实施时采用。</div>
+<table>
+  <tr><th>期</th><th>交付</th><th>验收</th></tr>
+  <tr><td class="p0">P0 · 最小可用</td><td>协议层 + Chat 组合件 + ai-chat 渲染器薄壳(消息流/流式输出/停止/错误态/welcome+hints)+ env.aguiFetcher + 单测</td><td>examples 两个 demo:① amis schema 页对接 amis-agent-starter 真流;② 独立 React 页(不进 amis render,直接 &lt;Chat&gt;)证明 D6;decoder/reducer 单测覆盖半包/多事件帧/心跳;渲染器测试含流式快照</td></tr>
+  <tr><td class="p1">P1 · agent 语义</td><td>工具调用卡片、思考过程折叠、消息操作(复制/重发/反馈)、STATE 写回数据域联动、onEvent 全量接线</td><td>表格组件随 STATE_DELTA 实时更新;finish 事件可触发动作链</td></tr>
+  <tr><td class="p2">P2 · 低代码闭环</td><td>amis-editor 可视化插件(零 JSON 手输)、四主题适配、文档 <code>docs/zh-CN/components/ai-chat.md</code>(schema 示例实时渲染)</td><td>编辑器拖入即用,配置全可视化;stylelint/typecheck 通过</td></tr>
+</table>
+<p class="warn"><b>暂不做(明确出范围):</b>会话持久化/多会话列表、附件上传、多模态消息、语音输入。等 P2 后按真实需求再加,避免第一期摊大饼。</p>
+
+<h2>9. 风险与待确认项</h2>
+<table>
+  <tr><th>#</th><th>风险/待确认</th><th>应对</th></tr>
+  <tr><td>1</td><td>后端当前事件集是否覆盖 TOOL_CALL_*/STATE_DELTA(README 只明确了主链路)</td><td>P0 前用 curl 实测 /amis-agent/chat 事件流核对;未覆盖的事件前端做好空态降级</td></tr>
+  <tr><td>2</td><td>鉴权:宿主页面登录态如何带到 AG-UI 端点(cookie/header)</td><td>默认实现同源带 cookie;跨域/特殊 header 由宿主覆盖 env.aguiFetcher(这正是 D3 的设计动机)</td></tr>
+  <tr><td>3</td><td>流式高频 setText 的渲染性能(长回答)</td><td>参考 ChatStreamer:rAF 节流合帧,markdown 分段增量渲染;P0 先简单节流,P1 压测再优化</td></tr>
+  <tr><td>4</td><td>SB2 网关式部署(透传)下 SSE 是否被缓冲</td><td>demo 验证;文档注明需要 <code>X-Accel-Buffering: no</code> 等网关配置</td></tr>
+</table>
+
+</body>
+</html>

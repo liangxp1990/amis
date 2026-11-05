@@ -119,6 +119,7 @@ export * from './Timeline'; // 时间轴
 export * from './Divider'; // 分隔线
 export * from './CodeView'; // 代码高亮
 export * from './Markdown';
+export * from './AIChat'; // AI 对话
 export * from './Collapse'; // 折叠器
 export * from './Slider'; // 滑动条
 export * from './OfficeViewer'; // 文档预览

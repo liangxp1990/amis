@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh">
+  <head>
+    <meta charset="UTF-8" />
+    <title>ai-chat 演示 · amis 渲染器 + 独立 React 组件</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link
+      rel="stylesheet"
+      href="../node_modules/@fortawesome/fontawesome-free/css/all.css"
+    />
+    <link
+      rel="stylesheet"
+      href="../node_modules/@fortawesome/fontawesome-free/css/v4-shims.css"
+    />
+    <link rel="stylesheet" href="../packages/amis-ui/scss/themes/cxd.scss" />
+    <style>
+      body {
+        margin: 0;
+        background: #f5f6f8;
+        font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      }
+      .demo-header {
+        padding: 16px 24px;
+        background: #fff;
+        border-bottom: 1px solid #e5e9ef;
+      }
+      .demo-header h1 {
+        font-size: 18px;
+        margin: 0 0 4px;
+      }
+      .demo-header p {
+        font-size: 13px;
+        color: #57606a;
+        margin: 0;
+      }
+      .demo-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        padding: 16px 24px;
+        height: calc(100vh - 90px);
+        box-sizing: border-box;
+      }
+      .demo-card {
+        background: #fff;
+        border: 1px solid #e5e9ef;
+        border-radius: 8px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      .demo-card-title {
+        padding: 10px 16px;
+        font-size: 14px;
+        font-weight: 600;
+        border-bottom: 1px solid #e5e9ef;
+      }
+      .demo-card-title small {
+        color: #57606a;
+        font-weight: 400;
+        margin-left: 8px;
+      }
+      .demo-card-body {
+        flex: 1;
+        min-height: 0;
+      }
+      /* embed/Chat 根容器占满卡片 */
+      .demo-card-body > div {
+        height: 100%;
+      }
+      @media (max-width: 900px) {
+        .demo-grid {
+          grid-template-columns: 1fr;
+          height: auto;
+        }
+        .demo-card {
+          height: 70vh;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-header">
+      <h1>ai-chat 演示</h1>
+      <p>
+        同一个 Chat 实现、两种出口：<b>左侧走 amis 渲染器 + 真实 AG-UI
+        后端</b>（amis-agent-starter，经 vite 代理至 127.0.0.1:18090，GLM
+        真实回答；让 AI「修改页面」可触发工具调用卡片）；<b>右侧是 amis-ui
+        普通 React 组件 + 内置 mock 事件流</b>，无需后端即可体验完整交互。
+      </p>
+    </div>
+    <div class="demo-grid">
+      <div class="demo-card">
+        <div class="demo-card-title">
+          amis 渲染器<small>schema + env.aguiFetcher</small>
+        </div>
+        <div class="demo-card-body" id="amis-root"></div>
+      </div>
+      <div class="demo-card">
+        <div class="demo-card-title">
+          独立 React 组件<small>import {'{ Chat }'} from 'amis-ui'</small>
+        </div>
+        <div class="demo-card-body" id="react-root"></div>
+      </div>
+    </div>
+    <script type="module" src="./ai-chat-demo.tsx"></script>
+  </body>
+</html>

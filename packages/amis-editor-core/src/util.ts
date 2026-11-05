@@ -1973,23 +1973,29 @@ export function deepSplice(
   }, host);
 }
 
+type RawType =
+  | 'string'
+  | 'number'
+  | 'array'
+  | 'boolean'
+  | 'object'
+  | 'enum'
+  | 'date'
+  | 'datetime'
+  | 'time'
+  | 'quarter'
+  | 'year'
+  | 'month'
+  | 'user'
+  | 'department';
+
+/**
+ * shortcut: SchemaType 会随渲染器注册增长,此表只列举表单控件的取值类型,
+ * 未列举的类型走使用处的 `|| 'string'` 兜底,故追加 string 索引签名。
+ */
 export const RAW_TYPE_MAP: {
-  [k in SchemaType | 'user-select' | 'department-select']?:
-    | 'string'
-    | 'number'
-    | 'array'
-    | 'boolean'
-    | 'object'
-    | 'enum'
-    | 'date'
-    | 'datetime'
-    | 'time'
-    | 'quarter'
-    | 'year'
-    | 'month'
-    | 'user'
-    | 'department';
-} = {
+  [k in SchemaType | 'user-select' | 'department-select']?: RawType;
+} & Record<string, RawType | undefined> = {
   'input-text': 'string',
   'input-password': 'string',
   'input-email': 'string',

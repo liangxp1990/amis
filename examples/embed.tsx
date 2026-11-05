@@ -100,6 +100,7 @@ export function embed(
   };
 
   const amisEnv = {
+    aguiFetcher: env?.aguiFetcher,
     getModalContainer: () =>
       env?.getModalContainer?.() || document.querySelector('.amis-scope'),
     notify: (type: ToastLevel, msg: string, conf?: ToastConf) =>

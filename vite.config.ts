@@ -63,7 +63,14 @@ export default defineConfig({
   },
   server: {
     host: '0.0.0.0',
-    port: 8888
+    port: 8888,
+    // AG-UI 后端联调代理(demo 页同源访问,规避 CORS)
+    proxy: {
+      '/amis-agent': {
+        target: 'http://127.0.0.1:18090',
+        changeOrigin: true
+      }
+    }
   },
   resolve: {
     alias: [

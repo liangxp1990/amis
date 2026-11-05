@@ -41,6 +41,7 @@ export * from './schema';
 export * from './types';
 export * from './store';
 export * from './globalVar';
+export * from './ai';
 import * as utils from './utils/helper';
 import './globalVarClientHandler';
 import './globalVarDefaultValueHandler';

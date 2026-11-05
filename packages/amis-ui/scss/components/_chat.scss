@@ -1,0 +1,622 @@
+.#{$ns}Chat {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: px2rem(320px);
+  background: var(--background);
+  border-radius: var(--borderRadius);
+
+  // 消息列表
+  &-messages {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: px2rem(16px);
+    display: flex;
+    flex-direction: column;
+    gap: px2rem(16px);
+  }
+
+  // 消息条目:防止横向溢出裁切头像
+  &-item {
+    min-width: 0;
+
+    &.is-user {
+      margin-left: auto;
+    }
+  }
+
+  // 空态提示语
+  &-hints {
+    display: flex;
+    flex-wrap: wrap;
+    gap: px2rem(8px);
+    justify-content: center;
+    margin-top: px2rem(48px);
+  }
+
+  &-hint {
+    padding: px2rem(4px) px2rem(12px);
+    font-size: px2rem(13px);
+    color: var(--primary);
+    background: var(--background);
+    border: px2rem(1px) solid var(--borderColor);
+    border-radius: px2rem(999px);
+    cursor: pointer;
+    transition: background 0.15s ease-out;
+
+    &:hover {
+      background: var(--body-bg);
+    }
+  }
+
+  // 单条消息
+  &-item {
+    display: flex;
+    gap: px2rem(8px);
+    max-width: 86%;
+
+    &.is-assistant {
+      align-self: flex-start;
+    }
+
+    // 用户消息:中性浅底深字(对标 ChatGPT/Claude,全主题稳定可读)
+    &.is-user {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+
+      .#{$ns}Chat-bubble {
+        background: var(--colors-neutral-fill-9, rgba(0, 0, 0, 0.06));
+      }
+    }
+  }
+
+  &-avatar {
+    flex: none;
+    width: px2rem(32px);
+    height: px2rem(32px);
+    border-radius: 50%;
+    background: var(--body-bg);
+    border: px2rem(1px) solid var(--borderColor);
+    color: var(--primary);
+    font-size: px2rem(14px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+
+    // turn 聚合:非首条条目的空占位
+    &.is-placeholder {
+      visibility: hidden;
+    }
+
+    svg {
+      width: px2rem(16px);
+      height: px2rem(16px);
+    }
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
+  &-item-main {
+    display: flex;
+    flex-direction: column;
+    gap: px2rem(4px);
+    min-width: 0;
+  }
+
+  &-item-name {
+    font-size: px2rem(12px);
+    color: var(--text-color);
+    opacity: 0.6;
+  }
+
+  &-bubble {
+    padding: px2rem(8px) px2rem(14px);
+    border-radius: px2rem(16px);
+    font-size: px2rem(14px);
+    line-height: 1.6;
+    word-break: break-word;
+
+    // 宿主常引 github-markdown-css 之类给 .markdown-body 设白底,
+    // 会盖住气泡底色(视觉变成"描边+白底"),组件内强制透明;
+    // 同时组件自带 markdown 基础样式(表格/代码/引用),不依赖宿主
+    .markdown-body {
+      background-color: transparent;
+
+      &:first-child {
+        margin-top: 0;
+      }
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      p {
+        margin: 0 0 px2rem(8px);
+      }
+
+      table {
+        border-collapse: collapse;
+        margin: px2rem(8px) 0;
+        display: block;
+        overflow-x: auto;
+        max-width: 100%;
+
+        th,
+        td {
+          border: px2rem(1px) solid var(--borderColor);
+          padding: px2rem(5px) px2rem(12px);
+          text-align: left;
+        }
+
+        th {
+          background: var(--colors-neutral-fill-9, rgba(0, 0, 0, 0.04));
+          font-weight: 600;
+        }
+
+        tr:nth-child(2n) td {
+          background: var(--colors-neutral-fill-10, transparent);
+        }
+      }
+
+      pre {
+        background: var(--body-bg);
+        border: px2rem(1px) solid var(--borderColor);
+        border-radius: px2rem(6px);
+        padding: px2rem(10px);
+        overflow-x: auto;
+        font-size: px2rem(13px);
+      }
+
+      code {
+        background: var(--colors-neutral-fill-9, rgba(0, 0, 0, 0.06));
+        border-radius: px2rem(4px);
+        padding: px2rem(1px) px2rem(5px);
+        font-size: px2rem(13px);
+        font-family: var(--font-familyMonospace, monospace);
+      }
+
+      pre code {
+        background: transparent;
+        padding: 0;
+      }
+
+      blockquote {
+        margin: px2rem(8px) 0;
+        padding: px2rem(2px) px2rem(12px);
+        border-left: px2rem(3px) solid var(--borderColor);
+        color: var(--text-color);
+        opacity: 0.75;
+      }
+
+      ul,
+      ol {
+        margin: px2rem(8px) 0;
+        padding-left: px2rem(22px);
+      }
+
+      h1,
+      h2,
+      h3,
+      h4 {
+        margin: px2rem(14px) 0 px2rem(8px);
+        line-height: 1.4;
+      }
+
+      a {
+        color: var(--primary);
+      }
+    }
+
+    .#{$ns}Chat-item:not(.is-bubble) & {
+      padding: 0;
+    }
+
+    // 流式输出末尾闪烁光标(对标 ChatGPT/Claude)
+    .#{$ns}Chat-item.is-streaming &::after {
+      content: '';
+      display: inline-block;
+      width: px2rem(2px);
+      height: 1em;
+      margin-left: px2rem(2px);
+      vertical-align: text-bottom;
+      background: var(--primary);
+      animation: #{$ns}chat-blink-cursor 1s steps(2) infinite;
+    }
+  }
+
+  // 消息操作行(复制/重新生成,对标 ChatGPT/Gemini 的消息底部小图标行)
+  &-actions {
+    display: inline-flex;
+    gap: px2rem(2px);
+  }
+
+  &-action {
+    border: none;
+    background: transparent;
+    color: var(--text-color);
+    opacity: 0.45;
+    cursor: pointer;
+    padding: px2rem(3px);
+    border-radius: px2rem(4px);
+    display: inline-flex;
+
+    svg {
+      width: px2rem(14px);
+      height: px2rem(14px);
+    }
+
+    &:hover {
+      opacity: 1;
+      background: var(--colors-neutral-fill-9, rgba(0, 0, 0, 0.06));
+    }
+  }
+
+  // 三点加载动画
+  &-loading {
+    display: inline-flex;
+    gap: px2rem(4px);
+    padding: px2rem(6px) 0;
+
+    i {
+      width: px2rem(6px);
+      height: px2rem(6px);
+      border-radius: 50%;
+      background: var(--text-color);
+      opacity: 0.4;
+      animation: #{$ns}chat-blink 1.2s infinite ease-in-out;
+
+      &:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+
+      &:nth-child(3) {
+        animation-delay: 0.4s;
+      }
+    }
+  }
+
+  // 思考过程:整行摘要条(对标 ChatGPT o1/Claude 的 thinking 行)
+  &-thinking {
+    width: 100%;
+
+    &-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: px2rem(6px);
+      border: none;
+      background: var(--colors-neutral-fill-9, rgba(0, 0, 0, 0.06));
+      border-radius: px2rem(999px);
+      padding: px2rem(4px) px2rem(12px);
+      font-size: px2rem(13px);
+      color: var(--text-color);
+      opacity: 0.75;
+      cursor: pointer;
+      max-width: 100%;
+
+      &:hover {
+        opacity: 1;
+      }
+    }
+
+    &-label {
+      white-space: nowrap;
+    }
+
+    .icon-chat-sparkles {
+      width: px2rem(14px);
+      height: px2rem(14px);
+      flex: none;
+      color: var(--primary);
+    }
+
+    .#{$ns}Chat-thinking-caret {
+      width: px2rem(12px);
+      height: px2rem(12px);
+      flex: none;
+      opacity: 0.6;
+    }
+
+    &-body {
+      margin-top: px2rem(6px);
+      padding: px2rem(8px) px2rem(12px);
+      border-left: px2rem(2px) solid var(--borderColor);
+      font-size: px2rem(13px);
+      line-height: 1.6;
+      color: var(--text-color);
+      opacity: 0.72;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: px2rem(280px);
+      overflow-y: auto;
+    }
+
+    &.is-streaming {
+      .#{$ns}Chat-thinking-label {
+        color: var(--primary);
+        opacity: 1;
+      }
+
+      .icon-chat-sparkles {
+        animation: #{$ns}chat-pulse 1.2s ease-in-out infinite;
+      }
+    }
+  }
+
+  // 工具调用:单行步骤(对标 Claude 的 tool use 行)
+  &-tool {
+    width: 100%;
+    max-width: px2rem(560px);
+
+    &-row {
+      display: flex;
+      align-items: center;
+      gap: px2rem(8px);
+      width: 100%;
+      border: none;
+      background: transparent;
+      border-radius: px2rem(8px);
+      padding: px2rem(4px) px2rem(8px);
+      font-size: px2rem(13px);
+      color: var(--text-color);
+      text-align: left;
+      cursor: pointer;
+
+      &:hover {
+        background: var(--colors-neutral-fill-8, rgba(0, 0, 0, 0.04));
+      }
+    }
+
+    &-icon {
+      display: inline-flex;
+      flex: none;
+
+      svg {
+        width: px2rem(15px);
+        height: px2rem(15px);
+        opacity: 0.75;
+      }
+    }
+
+    &.is-running .#{$ns}Chat-tool-icon svg {
+      animation: #{$ns}chat-pulse 1.2s ease-in-out infinite;
+    }
+
+    &.is-error .#{$ns}Chat-tool-icon svg {
+      color: var(--danger);
+      opacity: 0.9;
+    }
+
+    &-name {
+      font-weight: 500;
+      color: var(--text-color);
+      // 工具名是长标识符,等宽展示;break-word 不参与 intrinsic 宽度计算,
+      // 不会触发 flex 父链收缩(anywhere 会把 min-content 逐字符化)
+      font-family: var(--font-familyMonospace, monospace);
+      overflow-wrap: break-word;
+      flex: none;
+    }
+
+    &-state {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      opacity: 0.55;
+      display: inline-flex;
+      align-items: center;
+      gap: px2rem(4px);
+
+      svg {
+        width: px2rem(12px);
+        height: px2rem(12px);
+        animation: #{$ns}chat-rotate 1s linear infinite;
+      }
+
+      &.is-error {
+        color: var(--danger);
+        opacity: 0.9;
+      }
+    }
+
+    .#{$ns}Chat-tool-caret {
+      width: px2rem(12px);
+      height: px2rem(12px);
+      flex: none;
+      opacity: 0.5;
+    }
+
+    &-detail {
+      margin: px2rem(2px) 0 0 px2rem(23px);
+    }
+
+    &-section {
+      &-title {
+        font-size: px2rem(12px);
+        opacity: 0.55;
+        margin-bottom: px2rem(2px);
+      }
+
+      pre {
+        margin: 0 0 px2rem(8px);
+        padding: px2rem(8px);
+        background: var(--body-bg);
+        border: px2rem(1px) solid var(--borderColor);
+        border-radius: px2rem(6px);
+        overflow-x: auto;
+        font-size: px2rem(12px);
+        max-height: px2rem(240px);
+      }
+    }
+  }
+
+  // 错误条 + 重试(对标 ChatGPT 的错误+重试)
+  &-error {
+    margin-top: px2rem(4px);
+    padding: px2rem(4px) px2rem(8px);
+    border-left: px2rem(3px) solid var(--danger);
+    color: var(--danger);
+    font-size: px2rem(13px);
+    background: var(--body-bg);
+    border-radius: px2rem(4px);
+    display: flex;
+    align-items: center;
+    gap: px2rem(8px);
+    flex-wrap: wrap;
+
+    &-retry {
+      border: none;
+      background: transparent;
+      color: var(--danger);
+      font-size: px2rem(13px);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: px2rem(4px);
+      padding: px2rem(2px) px2rem(6px);
+      border-radius: px2rem(4px);
+
+      svg {
+        width: px2rem(13px);
+        height: px2rem(13px);
+      }
+
+      &:hover {
+        background: var(--colors-neutral-fill-9, rgba(0, 0, 0, 0.06));
+      }
+    }
+  }
+
+  // 输入区:一体化胶囊容器(对齐 Gemini/ChatGPT 形态)
+  &-input {
+    display: flex;
+    align-items: flex-end;
+    gap: px2rem(8px);
+    margin: 0 px2rem(12px) px2rem(12px);
+    padding: px2rem(7px) px2rem(7px) px2rem(7px) px2rem(16px);
+    border: px2rem(1px) solid var(--borderColor);
+    border-radius: px2rem(24px);
+    background: var(--background);
+    transition: border-color 0.15s ease-out, box-shadow 0.15s ease-out;
+
+    &:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    }
+
+    &-textarea {
+      flex: 1;
+      border: none;
+      outline: none;
+      resize: none;
+      background: transparent;
+      color: var(--text-color);
+      font-size: px2rem(14px);
+      line-height: 1.6;
+      max-height: px2rem(160px);
+      padding: px2rem(6px) 0;
+      font-family: inherit;
+
+      &::placeholder {
+        color: var(--text-color);
+        opacity: 0.4;
+      }
+    }
+
+    // 单按钮三态:禁用(空输入,中性灰) → 激活(品牌色) → 停止(描边中性)
+    &-btn {
+      flex: none;
+      width: px2rem(32px);
+      height: px2rem(32px);
+      border-radius: 50%;
+      border: px2rem(1px) solid transparent;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--primary);
+      color: #fff;
+      transition: opacity 0.15s ease-out, background 0.15s ease-out,
+        color 0.15s ease-out, transform 0.1s ease-out;
+
+      &:disabled {
+        // 禁用态用中性灰(对标 ChatGPT 空态灰圆),品牌色 30% 在浅色下近乎不可见
+        background: var(--colors-neutral-fill-8, rgba(0, 0, 0, 0.1));
+        color: var(--text-color);
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
+      svg {
+        width: px2rem(15px);
+        height: px2rem(15px);
+      }
+
+      &.is-active {
+        opacity: 1;
+      }
+
+      // 停止态:中性描边钮,区别于品牌色发送态
+      &.is-stop {
+        background: var(--background);
+        color: var(--text-color);
+        border-color: var(--borderColor);
+        opacity: 1;
+      }
+
+      &:active:not(:disabled) {
+        transform: scale(0.92);
+      }
+    }
+  }
+}
+
+@keyframes #{$ns}chat-blink {
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+  }
+
+  40% {
+    opacity: 1;
+  }
+}
+
+@keyframes #{$ns}chat-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// 思考/工具运行中的呼吸动画
+@keyframes #{$ns}chat-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes #{$ns}chat-blink-cursor {
+  0% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
