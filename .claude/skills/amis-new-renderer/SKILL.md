@@ -189,6 +189,8 @@ registerRenderer({
 5. **H5 自适应模式**：交互型图形控件用 `width + maxWidth:'100%' + aspectRatio` 替代固定高度；坐标/几何换算一律按渲染时 `offsetWidth/offsetHeight` 动态计算（jsdom 里恒为 0，测试需 `Object.defineProperty` mock），任意显示尺寸下数学自洽。触摸交互用 pointer 事件（`touch-action:none` 防滚动劫持）+ mouse 事件兜底（双绑定需防重复：会话存在即 return）。
 6. **Schema 字段名 `context` 是保留字**（ai-chat 组件实证）：RootRenderer 向所有渲染器下发 `context: store.context`（amis 顶层"上下文"概念），schema 里叫 `context` 的字段会被同名覆盖、值恒为 `{}`——自定义业务上下文字段必须换名（如 `agentContext`）。排查这类"字段到了组件变空对象"的问题，先查 RENDERER_TRANSMISSION_OMIT_PROPS 与 RootRenderer 的强制下发 props。
 7. **env 新增能力点用可选字段 + 内置默认实现**（ai-chat 的 `env.aguiFetcher` 实证）：fetcher 契约是"一次性完整响应"，SSE 持续回调类能力（流式）不要塞进 fetcher——在 RendererEnv 上加**可选**扩展点（宿主零改造可用，需鉴权/网关时覆盖），组件内部带默认实现并允许 props 注入覆盖（`props.fetcher ?? env.aguiFetcher ?? defaultImpl`）。UI 核心实现放 amis-ui 保持"普通 React 组件可用"，渲染器只做 schema→props 薄壳，一份实现两个出口。
+8. **examples 演示页 import amis-ui 组件直连 src 路径**（ai-chat demo 实证）：examples 下惯用的 `import {X} from 'amis-ui/lib/components/X'` 在运行时被 vite alias 到 src，但 `tsc --noEmit`（tsconfig.typecheck.json 的 paths 只映射裸包名 `amis-ui`）会解析到**旧的 lib 构建产物**——刚改的组件新 props 在 typecheck 里"不存在"报 TS2322。演示页一律 `import {X} from '../packages/amis-ui/src/components/X'`，类型随源码即时同步。
+9. **多模态/附件类能力优先查后端的 wire 协议**（ai-chat 附件实证）：给对话组件加图片输入前，先反编译/查后端依赖 jar（`unzip + javap -v` 看 Jackson 注解）确认消息模型对 content 形态的支持——agentscope-java 2.x 的 AG-UI `AguiMessage.content` 原生接受 `string | 内容块数组`（type 判别 text/image/audio/video，source 判别 data/url），选它即后端零改动；自造扩展字段会迫使后端配合改造。组装逻辑做成纯函数（如 `toAguiMessage`）单测覆盖协议形状。
 
 ## 深入阅读（references/）
 

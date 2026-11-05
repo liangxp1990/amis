@@ -255,6 +255,37 @@ export class AIChatPlugin extends BasePlugin {
                       }
                     ],
                     clearable: true
+                  },
+                  getSchemaTpl('switch', {
+                    name: 'enableAttachment',
+                    label: '附件上传',
+                    value: false,
+                    description:
+                      '输入框内提供添加附件按钮,图片以 base64 随消息发送(需后端支持多模态,如 GLM 视觉模型)'
+                  }),
+                  {
+                    name: 'attachmentAccept',
+                    type: 'input-text',
+                    label: '附件类型',
+                    placeholder: '默认 image/*(仅图片)',
+                    visibleOn: '${enableAttachment}',
+                    description: 'HTML accept 值,如 image/* 或 .pdf,.png'
+                  },
+                  {
+                    name: 'attachmentMaxSize',
+                    type: 'input-number',
+                    label: '单文件上限(MB)',
+                    placeholder: '默认 5',
+                    min: 1,
+                    visibleOn: '${enableAttachment}'
+                  },
+                  {
+                    name: 'attachmentMaxCount',
+                    type: 'input-number',
+                    label: '数量上限',
+                    placeholder: '默认 9',
+                    min: 1,
+                    visibleOn: '${enableAttachment}'
                   }
                 ]
               }

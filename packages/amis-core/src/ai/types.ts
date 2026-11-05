@@ -73,12 +73,53 @@ export interface AguiEvent {
   [key: string]: any;
 }
 
+/**
+ * AG-UI 类型化内容块(多模态输入,GenAI 风格扩展)。
+ *
+ * 纯文本消息 content 保持 string(标准 AG-UI);携带图片等附件时
+ * content 为块数组。agentscope-java 2.x 的 AguiMessage 反序列化
+ * 原生支持两种形态,并把 image 块转为模型侧多模态请求(如 GLM vision)。
+ */
+export type AguiContentBlock =
+  | {type: 'text'; text: string}
+  | {type: 'image'; source: AguiContentSource}
+  | {type: 'audio'; source: AguiContentSource}
+  | {type: 'video'; source: AguiContentSource};
+
+/**
+ * 内容块数据源。
+ *
+ * @param type 'data' 时 value 为裸 base64(不含 data: 前缀);
+ *             'url' 时 value 为可公网访问的资源地址。
+ */
+export type AguiContentSource =
+  | {type: 'data'; value: string; mimeType: string}
+  | {type: 'url'; value: string; mimeType?: string};
+
 /** AG-UI 消息(RunAgentInput.messages 的元素与 MESSAGES_SNAPSHOT 共用) */
 export interface AguiMessage {
   id: string;
   role: AguiRole;
-  content: string;
+  /** 纯文本,或多模态内容块数组(见 {@link AguiContentBlock}) */
+  content: string | AguiContentBlock[];
   [key: string]: any;
+}
+
+/**
+ * 聊天附件的 UI 模型(输入区选择后、随消息发送前的形态)。
+ *
+ * url 为 dataURL(base64),既是本地缩略图预览源,也是发送时
+ * 组装 {@link AguiContentBlock} data 源的数据来源。
+ */
+export interface ChatAttachment {
+  id: string;
+  /** 原始文件名 */
+  name: string;
+  mimeType: string;
+  /** 文件字节数 */
+  size: number;
+  /** dataURL(data:<mime>;base64,<data>) */
+  url: string;
 }
 
 /** 暴露给 Agent 的工具描述 */

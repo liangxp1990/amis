@@ -496,10 +496,9 @@
   // 输入区:一体化胶囊容器(对齐 Gemini/ChatGPT 形态)
   &-input {
     display: flex;
-    align-items: flex-end;
-    gap: px2rem(8px);
+    flex-direction: column;
     margin: 0 px2rem(12px) px2rem(12px);
-    padding: px2rem(7px) px2rem(7px) px2rem(7px) px2rem(16px);
+    padding: px2rem(7px) px2rem(7px) px2rem(7px) px2rem(9px);
     border: px2rem(1px) solid var(--borderColor);
     border-radius: px2rem(24px);
     background: var(--background);
@@ -508,6 +507,112 @@
     &:focus-within {
       border-color: var(--primary);
       box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    }
+
+    // 主体行:附件按钮 + textarea + 发送按钮
+    &-row {
+      display: flex;
+      align-items: flex-end;
+      gap: px2rem(6px);
+    }
+
+    // 附件暂存区:选中未发送的缩略图 chips
+    &-attachments {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: px2rem(8px);
+      padding: px2rem(4px) px2rem(2px) px2rem(8px) px2rem(8px);
+    }
+
+    &-attachment {
+      position: relative;
+      width: px2rem(52px);
+      height: px2rem(52px);
+      border-radius: px2rem(8px);
+      border: px2rem(1px) solid var(--borderColor);
+      background: var(--colors-neutral-fill-9, rgba(0, 0, 0, 0.04));
+      overflow: visible;
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: px2rem(8px);
+        display: block;
+      }
+
+      &-remove {
+        position: absolute;
+        top: px2rem(-6px);
+        right: px2rem(-6px);
+        width: px2rem(16px);
+        height: px2rem(16px);
+        border-radius: 50%;
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        background: var(--colors-neutral-fill-5, rgba(0, 0, 0, 0.45));
+        color: #fff;
+        transition: background 0.15s ease-out;
+
+        &:hover {
+          background: var(--danger);
+        }
+
+        svg {
+          width: px2rem(10px);
+          height: px2rem(10px);
+        }
+      }
+
+      &-error {
+        font-size: px2rem(12px);
+        color: var(--danger);
+        line-height: 1.4;
+      }
+    }
+
+    // 附件按钮:胶囊左下,中性透明钮(hover 浮起),不与发送按钮争夺视觉
+    &-attach {
+      flex: none;
+      width: px2rem(32px);
+      height: px2rem(32px);
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      background: transparent;
+      color: var(--text-color);
+      opacity: 0.55;
+      transition: opacity 0.15s ease-out,
+        background 0.15s ease-out;
+
+      &:hover:not(:disabled) {
+        opacity: 1;
+        background: var(--colors-neutral-fill-9, rgba(0, 0, 0, 0.06));
+      }
+
+      &.is-disabled,
+      &:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+      }
+
+      svg {
+        width: px2rem(17px);
+        height: px2rem(17px);
+      }
+    }
+
+    &-file {
+      display: none;
     }
 
     &-textarea {
@@ -574,6 +679,24 @@
         transform: scale(0.92);
       }
     }
+  }
+
+  // 用户消息附件缩略图(已发送)
+  &-attachments {
+    display: flex;
+    flex-wrap: wrap;
+    gap: px2rem(6px);
+    margin-top: px2rem(6px);
+  }
+
+  &-attachment {
+    max-height: px2rem(140px);
+    max-width: 100%;
+    border-radius: px2rem(8px);
+    border: px2rem(1px) solid var(--borderColor);
+    cursor: zoom-in;
+    display: block;
+    object-fit: contain;
   }
 }
 

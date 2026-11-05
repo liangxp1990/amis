@@ -8,11 +8,36 @@
 import React from 'react';
 import {createRoot} from 'react-dom/client';
 import {embed} from './embed';
-import {Chat} from 'amis-ui/lib/components/Chat';
-import type {AguiEvent, AguiFetcher} from 'amis-core';
+// 直连源码路径:vite dev 即时生效,且类型随源码演进(产物 lib 存在滞后)
+import {Chat} from '../packages/amis-ui/src/components/Chat';
+import type {
+  AguiContentBlock,
+  AguiEvent,
+  AguiFetcher,
+  RunAgentInput
+} from 'amis-core';
 
 /** 可中断的延时 */
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+/** 从消息 content(纯文本或多模态块数组)提取文本与附件块 */
+function parseContent(
+  content: string | AguiContentBlock[]
+): {text: string; imageCount: number} {
+  if (typeof content === 'string') {
+    return {text: content, imageCount: 0};
+  }
+  let text = '';
+  let imageCount = 0;
+  for (const block of content) {
+    if (block.type === 'text') {
+      text += block.text;
+    } else if (block.type === 'image') {
+      imageCount++;
+    }
+  }
+  return {text, imageCount};
+}
 
 /**
  * 模拟 AG-UI SSE 事件流的 fetcher。
@@ -24,16 +49,21 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
  */
 const mockFetcher = (() => {
   let seq = 0;
-  const fetcher = (endpoint, input, callbacks) => {
+  const fetcher: AguiFetcher = (
+    endpoint: string,
+    input: RunAgentInput,
+    callbacks
+  ) => {
     const run = ++seq;
     let aborted = false;
-    const emit = event => {
+    const emit = (event: AguiEvent) => {
       if (!aborted) {
         callbacks.onEvent(event);
       }
     };
-    const question =
-      input.messages[input.messages.length - 1]?.content || '空问题';
+    const {text: question, imageCount} = parseContent(
+      input.messages[input.messages.length - 1]?.content ?? ''
+    );
 
     (async () => {
       await sleep(200);
@@ -65,10 +95,13 @@ const mockFetcher = (() => {
       // 3. 流式文本
       emit({type: 'TEXT_MESSAGE_START', messageId: `a-${run}`, role: 'assistant'});
       const reply =
-        `已按「**${question}**」完成检索，结果如下：\n\n` +
-        `| 指标 | 值 |\n| --- | --- |\n| 订单数 | 128 |\n| GMV | ¥36,000 |\n| 客单价 | ¥281 |\n\n` +
-        `> 以上为 mock 数据。接入真实 AG-UI 后端(如 amis-agent-starter 的 /amis-agent/chat)` +
-        `后，这里将展示 Agent 的真实回答与工具结果。`;
+        imageCount > 0
+          ? `收到你上传的 **${imageCount} 张图片**（消息以多模态内容块发送）。\n\n` +
+            `真实 GLM 视觉后端会识别图片内容；mock 流仅确认链路：文本「${question || '（无文字）'}」+ 图片 ${imageCount} 张。`
+          : `已按「**${question || '空问题'}**」完成检索，结果如下：\n\n` +
+            `| 指标 | 值 |\n| --- | --- |\n| 订单数 | 128 |\n| GMV | ¥36,000 |\n| 客单价 | ¥281 |\n\n` +
+            `> 以上为 mock 数据。接入真实 AG-UI 后端(如 amis-agent-starter 的 /amis-agent/chat)` +
+            `后，这里将展示 Agent 的真实回答与工具结果。`;
       for (const ch of reply) {
         await sleep(10);
         emit({type: 'TEXT_MESSAGE_CONTENT', messageId: `a-${run}`, delta: ch});
@@ -98,10 +131,11 @@ embed(
     type: 'ai-chat',
     endpoint: '/amis-agent/chat',
     welcome:
-      '你好，我是 **amis 渲染器** 里的 AI 助手（真实 GLM 后端）。\n\n试试让我修改页面，会触发工具调用。',
+      '你好，我是 **amis 渲染器** 里的 AI 助手（真实 GLM 后端）。\n\n试试让我修改页面，会触发工具调用；也可以点输入框左侧回形针上传图片让我识别。',
     hints: ['你好，介绍一下你自己', '帮我在页面顶部加一个按钮'],
     roles: {assistant: {name: 'JSON 助手'}, user: {name: '我'}},
-    mode: 'userBubble'
+    mode: 'userBubble',
+    enableAttachment: true
   },
   {},
   {}
@@ -136,6 +170,7 @@ function ReactDemo() {
           hints={['查询本月订单', '分析 GMV 趋势']}
           roles={{assistant: {name: 'React 助手'}, user: {name: '我'}}}
           mode="userBubble"
+          enableAttachment={true}
           onStateUpdate={setAgentState}
         />
       </div>
@@ -143,4 +178,7 @@ function ReactDemo() {
   );
 }
 
-createRoot(document.querySelector('#react-root')).render(<ReactDemo />);
+const reactRoot = document.querySelector<HTMLElement>('#react-root');
+if (reactRoot) {
+  createRoot(reactRoot).render(<ReactDemo />);
+}

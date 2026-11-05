@@ -260,7 +260,13 @@
   <tr><td class="p1">P1 · agent 语义</td><td>工具调用卡片、思考过程折叠、消息操作(复制/重发/反馈)、STATE 写回数据域联动、onEvent 全量接线</td><td>表格组件随 STATE_DELTA 实时更新;finish 事件可触发动作链</td></tr>
   <tr><td class="p2">P2 · 低代码闭环</td><td>amis-editor 可视化插件(零 JSON 手输)、四主题适配、文档 <code>docs/zh-CN/components/ai-chat.md</code>(schema 示例实时渲染)</td><td>编辑器拖入即用,配置全可视化;stylelint/typecheck 通过</td></tr>
 </table>
-<p class="warn"><b>暂不做(明确出范围):</b>会话持久化/多会话列表、附件上传、多模态消息、语音输入。等 P2 后按真实需求再加,避免第一期摊大饼。</p>
+<p class="warn"><b>暂不做(明确出范围):</b>会话持久化/多会话列表、语音输入。附件上传/多模态消息原在此清单中,<b>已于 2026-11-05 实现</b>(见下方记录)。等 P2 后按真实需求再加,避免第一期摊大饼。</p>
+
+<div class="decision"><b>附件上传实施记录(2026-11-05,图片多模态已上线)</b><br>
+<b>协议决策</b>:不走自定义扩展字段,采用 AG-UI 类型化 content 数组——纯文本消息 content 保持 string(兼容所有实现),带附件时为 <code>[{type:'text',text},{type:'image',source:{type:'data',value:'&lt;裸base64&gt;',mimeType}}]</code>(source 另支持 url 形态)。依据:反编译 agentscope-extensions-agui 2.0.4(用户后端实际版本)确认 <code>AguiMessage.content</code> 反序列化原生接受 string | InputContent[],<code>@JsonTypeInfo(property='type')</code> 判别 text/image/audio/video 块与 data/url 源,并自动转模型侧多模态请求——<b>后端零改动</b>。document 块 agentscope 会以 RUN_ERROR 拒绝,前端不分派。<br>
+<b>UI 形态</b>:输入胶囊左下回形针按钮(Lucide paperclip,图标体系 chat-*)→ 隐藏 file input(multiple)→ FileReader 读 dataURL → chips 缩略图暂存(可删)→ 发送;文本或附件任一非空即可发,纯图片消息不产生空 text 块;用户气泡渲染附件缩略图(点击新标签页看原图)。校验:单文件 5MB/最多 9 张(可配),超限行内红字 3s 自动消失(组件无 toast 依赖)。<br>
+<b>落点</b>:协议类型与组装在 amis-core <code>types.ts</code>(AguiContentBlock/ChatAttachment)+<code>reducer.ts</code>(toAguiMessage/attachmentToBlock 纯函数,SEND 带 attachments);UI 在 amis-ui ChatInput/Chat/ChatMessage + _chat.scss(暗色/CSS 变量适配);渲染器 4 个 schema 字段(enableAttachment 默认 false/attachmentAccept=image/*/attachmentMaxSize=5MB/attachmentMaxCount=9),sendMessage 事件携带附件元信息;编辑器插件功能开关分组 4 控件(visibleOn 联动)。<br>
+<b>验证</b>:测试 25/25(reducer 5 + 渲染器 3 端到端:jsdom FileReader 真读 dataURL 断言协议形状);typecheck/stylelint 通过;真实链路端到端——发送 80×60 纯红 PNG,GLM 视觉模型回复"偏珊瑚色的红色,色值约 #E8534F"(实际 #E84C4C,识别准确)。demo 页双栏均开启附件。</div>
 
 <h2>9. 风险与待确认项</h2>
 <table>

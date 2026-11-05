@@ -69,7 +69,7 @@ status 非 0 一律按失败处理并 toast msg。简单写法 `"api": "post:/ap
 | 表格增删改查 | `crud`（配 `api`/`columns`）或 `crud2` | components/crud.md |
 | 弹窗/抽屉 | `dialog`/`drawer`（按钮 `actionType: 'dialog'` 触发） | components/dialog.md |
 | 纯文本/富文本 | `tpl`/`markdown` | components/tpl.md |
-| AI 对话 | `ai-chat`（AG-UI 协议端点,流式回复/思考过程/工具调用/数据域联动） | components/ai-chat.md |
+| AI 对话 | `ai-chat`（AG-UI 协议端点,流式回复/思考过程/工具调用/数据域联动;`enableAttachment` 图片附件走多模态 content,agentscope-java 2.x 原生支持） | components/ai-chat.md |
 | 数据拉取容器 | `service`（initApi + body） | components/service.md |
 | 图表 | `chart`（echarts 配置） | components/chart.md |
 | 向导/步骤 | `wizard`/`steps` | |

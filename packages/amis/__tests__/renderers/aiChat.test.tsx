@@ -188,3 +188,79 @@ test('Renderer:ai-chat agentContext 兼容编辑器键值数组格式', async ()
     expect(lastRequest?.input.context).toEqual({pageName: '首页', fixed: 'x'});
   });
 });
+
+/**
+ * 附件多模态:
+ * 7. 默认不渲染附件按钮;enableAttachment 开启后渲染
+ * 8. 选择图片 + 输入文本发送 → RunAgentInput 最后一条消息为类型化块数组
+ * 9. 纯附件(无文本)可发送,不产生空 text 块
+ */
+test('Renderer:ai-chat 附件按钮随 enableAttachment 开关', () => {
+  const {container: def} = setup();
+  expect(def.querySelector('.cxd-Chat-input-attach')).toBeNull();
+
+  const {container} = setup({enableAttachment: true});
+  expect(container.querySelector('.cxd-Chat-input-attach')).not.toBeNull();
+  const fileInput = container.querySelector(
+    '.cxd-Chat-input-file'
+  ) as HTMLInputElement;
+  expect(fileInput).not.toBeNull();
+  expect(fileInput.getAttribute('accept')).toBe('image/*');
+});
+
+test('Renderer:ai-chat 图文混发组装多模态 content', async () => {
+  const {container, getByText} = setup({enableAttachment: true});
+  const file = new File(['fake-png-bytes'], 'chart.png', {type: 'image/png'});
+  fireEvent.change(container.querySelector('.cxd-Chat-input-file')!, {
+    target: {files: [file]}
+  });
+  // FileReader 异步读取,等待 chip 出现
+  await waitFor(() =>
+    expect(container.querySelector('.cxd-Chat-input-attachment')).not.toBeNull()
+  );
+
+  fireEvent.change(container.querySelector('.cxd-Chat-input-textarea')!, {
+    target: {value: '这是什么图'}
+  });
+  fireEvent.click(container.querySelector('.cxd-Chat-input-btn')!);
+
+  await waitFor(() => expect(lastRequest).toBeDefined());
+  const last = lastRequest!.input.messages[
+    lastRequest!.input.messages.length - 1
+  ];
+  expect(last.role).toBe('user');
+  const blocks = last.content as any[];
+  expect(Array.isArray(blocks)).toBe(true);
+  expect(blocks[0]).toEqual({type: 'text', text: '这是什么图'});
+  expect(blocks[1]?.type).toBe('image');
+  expect(blocks[1]?.source?.type).toBe('data');
+  expect(blocks[1]?.source?.mimeType).toBe('image/png');
+  expect(typeof blocks[1]?.source?.value).toBe('string');
+  // 发送后 chips 清空
+  expect(container.querySelector('.cxd-Chat-input-attachment')).toBeNull();
+});
+
+test('Renderer:ai-chat 纯附件消息可发送且无空 text 块', async () => {
+  const {container} = setup({enableAttachment: true});
+  const file = new File(['x'], 'a.jpg', {type: 'image/jpeg'});
+  fireEvent.change(container.querySelector('.cxd-Chat-input-file')!, {
+    target: {files: [file]}
+  });
+  await waitFor(() =>
+    expect(container.querySelector('.cxd-Chat-input-attachment')).not.toBeNull()
+  );
+  // 附件就位后发送按钮应可用(无文本)
+  const sendBtn = container.querySelector(
+    '.cxd-Chat-input-btn'
+  ) as HTMLButtonElement;
+  expect(sendBtn.disabled).toBe(false);
+  fireEvent.click(sendBtn);
+
+  await waitFor(() => expect(lastRequest).toBeDefined());
+  const last = lastRequest!.input.messages[
+    lastRequest!.input.messages.length - 1
+  ];
+  const blocks = last.content as any[];
+  expect(blocks.filter((b: any) => b.type === 'text')).toHaveLength(0);
+  expect(blocks[0]?.type).toBe('image');
+});

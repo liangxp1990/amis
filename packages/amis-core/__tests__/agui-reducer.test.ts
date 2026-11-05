@@ -196,3 +196,121 @@ test('reducer: 兼容 agentscope 的 REASONING_* 事件命名', () => {
   });
   expect(state.messages[2]).toMatchObject({kind: 'text', content: '回答'});
 });
+
+/**
+ * 附件多模态:
+ * 9. SEND 携带附件存入 UI 消息
+ * 10. toAguiMessage 无附件保持纯文本 string
+ * 11. toAguiMessage 有附件组装类型化块数组(dataURL → data 源裸 base64)
+ * 12. attachmentToBlock http 地址 → url 源;音频/视频 mimeType 分派
+ */
+import {
+  attachmentToBlock,
+  toAguiMessage
+} from '../src/ai/reducer';
+import type {ChatAttachment} from '../src/ai/types';
+
+function makeAttachment(overrides: Partial<ChatAttachment> = {}): ChatAttachment {
+  return {
+    id: 'att1',
+    name: 'chart.png',
+    mimeType: 'image/png',
+    size: 1024,
+    url: 'data:image/png;base64,iVBORw0KGgo=',
+    ...overrides
+  };
+}
+
+test('reducer: SEND 携带附件存入用户消息', () => {
+  const att = makeAttachment();
+  const final = run(
+    initialChatState,
+    {type: 'SEND', id: 'u1', content: '看图', attachments: [att]}
+  );
+  const userMsg = final.messages.find(m => m.id === 'u1');
+  expect(userMsg?.attachments).toEqual([att]);
+});
+
+test('toAguiMessage: 无附件 content 保持 string', () => {
+  const msg = {
+    id: 'u1',
+    role: 'user' as const,
+    kind: 'text' as const,
+    content: '你好',
+    status: 'complete' as const
+  };
+  expect(toAguiMessage(msg)).toEqual({
+    id: 'u1',
+    role: 'user',
+    content: '你好'
+  });
+});
+
+test('toAguiMessage: 附件组装类型化块数组(dataURL 拆 data 源)', () => {
+  const msg = {
+    id: 'u1',
+    role: 'user' as const,
+    kind: 'text' as const,
+    content: '这是什么',
+    status: 'complete' as const,
+    attachments: [makeAttachment()]
+  };
+  expect(toAguiMessage(msg)).toEqual({
+    id: 'u1',
+    role: 'user',
+    content: [
+      {type: 'text', text: '这是什么'},
+      {
+        type: 'image',
+        source: {type: 'data', value: 'iVBORw0KGgo=', mimeType: 'image/png'}
+      }
+    ]
+  });
+});
+
+test('toAguiMessage: 纯附件无文本时不产生空 text 块', () => {
+  const msg = {
+    id: 'u1',
+    role: 'user' as const,
+    kind: 'text' as const,
+    content: '',
+    status: 'complete' as const,
+    attachments: [makeAttachment()]
+  };
+  const out = toAguiMessage(msg);
+  expect(Array.isArray(out.content)).toBe(true);
+  expect((out.content as any[]).filter(b => b.type === 'text')).toHaveLength(0);
+});
+
+test('attachmentToBlock: http 地址映射 url 源,音视频按 mimeType 分派', () => {
+  expect(
+    attachmentToBlock(
+      makeAttachment({mimeType: 'image/jpeg', url: 'https://cdn.a.com/x.jpg'})
+    )
+  ).toEqual({
+    type: 'image',
+    source: {type: 'url', value: 'https://cdn.a.com/x.jpg'}
+  });
+  expect(
+    attachmentToBlock(
+      makeAttachment({
+        mimeType: 'audio/mp3',
+        url: 'data:audio/mp3;base64,AAAA'
+      })
+    )
+  ).toEqual({
+    type: 'audio',
+    source: {type: 'data', value: 'AAAA', mimeType: 'audio/mp3'}
+  });
+  expect(
+    attachmentToBlock(
+      makeAttachment({
+        mimeType: 'video/mp4',
+        url: 'data:video/mp4;base64,BBBB'
+      })
+    )
+  ).toEqual({
+    type: 'video',
+    source: {type: 'data', value: 'BBBB', mimeType: 'video/mp4'}
+  });
+});

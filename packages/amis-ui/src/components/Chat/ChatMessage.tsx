@@ -215,6 +215,37 @@ function ToolRow({
 }
 
 /**
+ * 附件缩略图:用户消息携带的图片预览网格。
+ * 点击在新标签页打开原图(dataURL 可直接预览),避免组件引入
+ * 图片查看器依赖。
+ */
+function AttachmentList({
+  message,
+  classnames: cx
+}: {
+  message: ChatMessage;
+  classnames: ClassNamesFn;
+}) {
+  if (!message.attachments?.length) {
+    return null;
+  }
+  return (
+    <div className={cx('Chat-attachments')}>
+      {message.attachments.map(att => (
+        <img
+          key={att.id}
+          className={cx('Chat-attachment')}
+          src={att.url}
+          alt={att.name}
+          title={att.name}
+          onClick={() => window.open(att.url, '_blank')}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
  * 渲染单条消息。
  *
  * @param props.message UI 消息模型(kind 决定渲染分支)
@@ -262,6 +293,7 @@ export default function ChatMessageView(props: ChatMessageProps) {
     ) : (
       <>
         <Markdown content={message.content} options={{linkify: true}} />
+        {isUser ? <AttachmentList message={message} classnames={cx} /> : null}
         {message.status === 'error' && message.error ? (
           <div className={cx('Chat-error')}>
             <span>{message.error}</span>

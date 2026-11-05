@@ -12,10 +12,12 @@ import {
   defaultAguiFetcher,
   initialChatState,
   themeable,
+  toAguiMessage,
   uuid,
   type AguiEvent,
   type AguiFetcher,
   type AguiTool,
+  type ChatAttachment,
   type ChatMessage,
   type ChatState,
   type RunAgentInput,
@@ -60,13 +62,21 @@ export interface ChatProps extends ThemeProps {
   /** 发送快捷键,默认 enter(另一个方向为 shift+enter) */
   sendHotKey?: 'enter' | 'shift+enter';
   placeholder?: string;
+  /** 是否启用附件按钮(图片等多模态输入,需后端支持类型化 content),默认不启用 */
+  enableAttachment?: boolean;
+  /** 文件选择器 accept,默认 image/* */
+  attachmentAccept?: string;
+  /** 单文件大小上限(MB),默认 5 */
+  attachmentMaxSize?: number;
+  /** 附件数量上限,默认 9 */
+  attachmentMaxCount?: number;
   /** 初始消息(如从持久化恢复) */
   initialMessages?: ChatMessage[];
   /** 禁用输入 */
   disabled?: boolean;
   className?: string;
   style?: React.CSSProperties;
-  onSendMessage?: (content: string) => void;
+  onSendMessage?: (content: string, attachments?: ChatAttachment[]) => void;
   /** 重新生成(截断最后一轮重发)时触发 */
   onRegenerate?: () => void;
   onFinish?: () => void;
@@ -186,14 +196,16 @@ function ChatBase(props: ChatProps) {
   );
 
   const send = useCallback(
-    (text: string) => {
+    (text: string, attachments?: ChatAttachment[]) => {
       const latest = propsRef.current;
       const content = text.trim();
-      if (!content || !latest.endpoint || stateRef.current.running) {
+      const atts = attachments?.length ? attachments : undefined;
+      if ((!content && !atts) || !latest.endpoint || stateRef.current.running) {
         return;
       }
       const id = uuid();
-      // 发送历史:既有消息 + 本条 user 消息;剔除伪消息与 tool/thinking 条目
+      // 发送历史:既有消息 + 本条 user 消息;剔除伪消息与 tool/thinking 条目;
+      // 附件消息由 toAguiMessage 组装为类型化 content 块数组
       const history: RunAgentInput['messages'] = [
         ...stateRef.current.messages,
         {
@@ -201,6 +213,7 @@ function ChatBase(props: ChatProps) {
           role: 'user' as const,
           kind: 'text' as const,
           content,
+          attachments: atts,
           status: 'complete' as const
         }
       ]
@@ -210,10 +223,10 @@ function ChatBase(props: ChatProps) {
             m.kind === 'text' &&
             m.status === 'complete'
         )
-        .map(m => ({id: m.id, role: m.role, content: m.content}));
+        .map(toAguiMessage);
 
-      dispatch({type: 'SEND', id, content});
-      latest.onSendMessage?.(content);
+      dispatch({type: 'SEND', id, content, attachments: atts});
+      latest.onSendMessage?.(content, atts);
       doFetch(history);
     },
     [doFetch]
@@ -250,7 +263,7 @@ function ChatBase(props: ChatProps) {
           m.kind === 'text' &&
           m.status === 'complete'
       )
-      .map(m => ({id: m.id, role: m.role, content: m.content}));
+      .map(toAguiMessage);
 
     dispatch({type: 'TRUNCATE', endIndex: lastUserIdx});
     dispatch({type: 'START_RUN'});
@@ -342,6 +355,10 @@ function ChatBase(props: ChatProps) {
         placeholder={props.placeholder}
         sendHotKey={props.sendHotKey}
         showStop={props.showStop}
+        enableAttachment={props.enableAttachment}
+        attachmentAccept={props.attachmentAccept}
+        attachmentMaxSize={props.attachmentMaxSize}
+        attachmentMaxCount={props.attachmentMaxCount}
         onSend={send}
         onStop={stop}
       />

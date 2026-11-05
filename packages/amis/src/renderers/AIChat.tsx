@@ -13,7 +13,7 @@ import {
   isPureVariable,
   resolveVariableAndFilter
 } from 'amis-core';
-import type {AguiTool, ChatMessage} from 'amis-core';
+import type {AguiTool, ChatAttachment, ChatMessage} from 'amis-core';
 // 同步引入:Chat 组合件体积小且依赖(Markdown)本就是 amis 主包依赖
 import {Chat} from 'amis-ui';
 
@@ -76,6 +76,18 @@ export interface AMISAIChatSchema extends AMISSchemaBase {
 
   /** 发送快捷键,默认 enter */
   sendHotKey?: 'enter' | 'shift+enter';
+
+  /** 是否启用附件按钮(图片等多模态输入,需后端支持类型化 content),默认 false */
+  enableAttachment?: boolean;
+
+  /** 文件选择器 accept,默认 image/* */
+  attachmentAccept?: string;
+
+  /** 单个附件大小上限(MB),默认 5 */
+  attachmentMaxSize?: number;
+
+  /** 附件数量上限,默认 9 */
+  attachmentMaxCount?: number;
 
   placeholder?: string;
 
@@ -143,8 +155,17 @@ export class AIChat extends React.Component<AIChatProps> {
         endpoint={finalEndpoint}
         context={finalContext}
         fetcher={env?.aguiFetcher ?? defaultAguiFetcher}
-        onSendMessage={(text: string) =>
-          dispatchEvent('sendMessage', {text, ...data})
+        onSendMessage={(text: string, attachments?: ChatAttachment[]) =>
+          dispatchEvent('sendMessage', {
+            text,
+            attachments: attachments?.map(({id, name, mimeType, size}) => ({
+              id,
+              name,
+              mimeType,
+              size
+            })),
+            ...data
+          })
         }
         onRegenerate={() => dispatchEvent('regenerate', data)}
         onFinish={() => dispatchEvent('finish', data)}

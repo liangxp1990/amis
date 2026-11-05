@@ -3,7 +3,13 @@
  * 纯函数实现,不依赖 React,可独立单测。
  */
 import {AGUI_EVENTS} from './types';
-import type {AguiEvent, AguiRole} from './types';
+import type {
+  AguiContentBlock,
+  AguiEvent,
+  AguiMessage,
+  AguiRole,
+  ChatAttachment
+} from './types';
 
 /** 工具调用的 UI 视图模型 */
 export interface ChatToolCall {
@@ -27,6 +33,8 @@ export interface ChatMessage {
   content: string;
   status: 'loading' | 'streaming' | 'complete' | 'error';
   toolCall?: ChatToolCall;
+  /** 用户消息携带的附件(图片等,渲染缩略图并随发送历史组装为多模态块) */
+  attachments?: ChatAttachment[];
   /** RUN_ERROR 时挂错误说明 */
   error?: string;
 }
@@ -41,7 +49,7 @@ export interface ChatState {
 }
 
 export type ChatAction =
-  | {type: 'SEND'; id: string; content: string}
+  | {type: 'SEND'; id: string; content: string; attachments?: ChatAttachment[]}
   | {type: 'AGUI_EVENT'; event: AguiEvent}
   | {type: 'STOP'}
   | {type: 'CLEAR'}
@@ -214,6 +222,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
             role: 'user',
             kind: 'text',
             content: action.content,
+            attachments: action.attachments,
             status: 'complete'
           },
           // 立即出现的助手占位(loading 动画),TEXT_MESSAGE_START 到达时被复用
@@ -521,4 +530,62 @@ function reduceEvent(state: ChatState, event: AguiEvent): ChatState {
     default:
       return state;
   }
+}
+
+/**
+ * 附件 → AG-UI 类型化内容块。
+ *
+ * dataURL(data:<mime>;base64,<data>)拆为 data 源(裸 base64 +
+ * mimeType);http(s) 地址拆为 url 源。块类型按 mimeType 前缀分派
+ * image/audio/video,与 agentscope-java 输入侧支持的块一致。
+ *
+ * @param att 输入区产出的附件模型
+ * @returns 多模态内容块
+ */
+export function attachmentToBlock(att: ChatAttachment): AguiContentBlock {
+  const match = /^data:([^;]+);base64,([\s\S]*)$/.exec(att.url);
+  if (match) {
+    return {
+      type: mediaKindOf(match[1]),
+      source: {type: 'data', value: match[2], mimeType: match[1]}
+    };
+  }
+  return {
+    type: mediaKindOf(att.mimeType),
+    source: {type: 'url', value: att.url}
+  };
+}
+
+/**
+ * UI 消息 → AG-UI 协议消息(发送历史元素)。
+ *
+ * 无附件时 content 保持纯文本 string(标准 AG-UI,兼容所有实现);
+ * 有附件时组装为类型化块数组:文本块(有文字才加) + 附件块。
+ *
+ * @param message UI 消息模型(kind 非文本的条目由调用方过滤)
+ * @returns RunAgentInput.messages 元素
+ */
+export function toAguiMessage(message: ChatMessage): AguiMessage {
+  if (!message.attachments?.length) {
+    return {id: message.id, role: message.role, content: message.content};
+  }
+  const blocks: AguiContentBlock[] = [];
+  if (message.content) {
+    blocks.push({type: 'text', text: message.content});
+  }
+  for (const att of message.attachments) {
+    blocks.push(attachmentToBlock(att));
+  }
+  return {id: message.id, role: message.role, content: blocks};
+}
+
+/** 按 mimeType 前缀映射内容块类型,非媒体类兜底为 image */
+function mediaKindOf(mimeType: string): 'image' | 'audio' | 'video' {
+  if (mimeType.startsWith('audio/')) {
+    return 'audio';
+  }
+  if (mimeType.startsWith('video/')) {
+    return 'video';
+  }
+  return 'image';
 }

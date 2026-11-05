@@ -78,7 +78,7 @@ AI 对话组件是数据链的一环：
 }
 ```
 
-在 form 中使用时，状态通过 `onBulkChange` 直接落入表单数据域；其余场景监听 `stateChange` 事件配合变量赋值（amis 事件动作机制）动作写入数据域。
+在 form 中使用时，状态通过 `onBulkChange` 直接落入表单数据域；其余场景监听 `stateChange` 事件配合[变量赋值](../../concepts/event-action)动作写入数据域。
 
 ## 事件
 
@@ -92,6 +92,24 @@ AI 对话组件是数据链的一环：
 ## 工具调用与思考过程
 
 AG-UI 后端推送 `TOOL_CALL_*` / `THINKING_*` 事件时，组件自动渲染工具调用卡片（名称/参数/结果/状态）与思考过程折叠块，无需额外配置。可用 `showToolCalls: false`、`showThinking: false` 关闭。
+
+## 附件上传（图片识别）
+
+开启 `enableAttachment` 后，输入框左下角出现「添加附件」按钮（回形针），选择图片后以缩略图暂存于输入框内，随消息一起发送，适合 GLM-4V / GLM-Flash 等视觉模型的图片识别场景：
+
+```schema
+{
+  "type": "ai-chat",
+  "endpoint": "/amis-agent/chat",
+  "enableAttachment": true,
+  "attachmentMaxSize": 5,
+  "attachmentMaxCount": 9
+}
+```
+
+- 图片以 base64 编码进消息内容（多模态内容块），**无需单独的上传接口**，但要求后端支持 AG-UI 类型化 content（agentscope-java 2.x 原生支持，会自动转换为模型侧的图片输入）；
+- 文本与图片可混合发送，纯图片（无文字）也可发送；
+- 已发送消息的气泡内会展示附件缩略图，点击可查看原图。
 
 ## 属性表
 
@@ -110,6 +128,10 @@ AG-UI 后端推送 `TOOL_CALL_*` / `THINKING_*` 事件时，组件自动渲染�
 | showToolCalls  | `boolean`                       | `true`       | 是否渲染工具调用卡片                                                  |
 | showStop       | `boolean`                       | `true`       | 是否显示停止生成按钮                                                  |
 | sendHotKey     | `string`                        | `enter`      | 发送快捷键：`enter` 或 `shift+enter`                                  |
+| enableAttachment | `boolean`                     | `false`      | 是否启用附件按钮（多模态输入，需后端支持类型化 content）              |
+| attachmentAccept | `string`                      | `image/*`    | 附件类型（HTML accept 值，如 `image/*`、`.pdf,.png`）                 |
+| attachmentMaxSize | `number`                      | `5`          | 单个附件大小上限（MB）                                                |
+| attachmentMaxCount | `number`                      | `9`          | 附件数量上限                                                          |
 | placeholder    | `string`                        |              | 输入框占位符                                                          |
 | initialMessages| |                              |              | 初始消息，用于恢复会话                                                |
 | disabled       | `boolean`                       | `false`      | 禁用输入                                                              |
@@ -157,3 +179,18 @@ import {Chat} from 'amis-ui';
 
 1. `POST {endpoint}`，请求体为 `RunAgentInput`（`threadId` / `messages` / `context` / `tools`）；
 2. 响应为 SSE 流，逐条推送标准事件：`RUN_STARTED` → `TEXT_MESSAGE_START/CONTENT/END`（流式文本）、`TOOL_CALL_*`（工具调用）、`THINKING_*`（思考过程）、`STATE_SNAPSHOT/DELTA`（状态联动）、`RUN_FINISHED` / `RUN_ERROR`。
+
+携带附件（图片）时，消息的 `content` 为类型化内容块数组（多模态扩展），纯文本消息仍为 string：
+
+```json
+{
+  "id": "m1",
+  "role": "user",
+  "content": [
+    {"type": "text", "text": "这张图是什么？"},
+    {"type": "image", "source": {"type": "data", "value": "<base64>", "mimeType": "image/png"}}
+  ]
+}
+```
+
+agentscope-java 2.x 的 AG-UI 端点原生支持该形态，会把 image 块转换为模型侧多模态输入（如 GLM 视觉模型的图片识别）。
