@@ -85,8 +85,8 @@ JSON 节点按 `type` 字段从组件池找到对应 React Component，其余属
 ### 主题与样式约定
 
 - CSS 类名用 SUIT 规范，组件内用 `cx('Xxx')` 生成（大写开头），配合 `#{$ns}` 前缀实现多主题（cxd 下生成 `.cxd-Xxx`）
-- scss 全在 packages/amis-ui/scss/（amis 包只有构建时复制的 css 产物）：组件样式 components/_xxx.scss（表单类在 form/ 子目录），在 themes/_common.scss 引入
-- CSS 变量三层：主题 token（themes/_cxd-variables.scss 等，`--colors-brand-5` 这类）→ 语义变量（_properties.scss，`--primary/--text-color/--borderColor` 等）→ 组件变量（_components.scss）；组件 scss 禁用 @if/lighten/darken（无法转成 CSS 变量，见 amis-ui/scss/README.md）
+- scss 全在 packages/amis-ui/scss/（amis 包只有构建时复制的 css 产物）：组件样式 components/\_xxx.scss（表单类在 form/ 子目录），在 themes/\_common.scss 引入
+- CSS 变量三层：主题 token（themes/\_cxd-variables.scss 等，`--colors-brand-5` 这类）→ 语义变量（\_properties.scss，`--primary/--text-color/--borderColor` 等）→ 组件变量（\_components.scss）；组件 scss 禁用 @if/lighten/darken（无法转成 CSS 变量，见 amis-ui/scss/README.md）
 
 ## 新增渲染器组件的标准流程
 
@@ -105,6 +105,7 @@ JSON 节点按 `type` 字段从组件池找到对应 React Component，其余属
 ## 调试（docs/zh-CN/extend/debug.md）
 
 开启内置调试面板（右侧，含运行日志和组件数据链查看）三选一：
+
 1. env 里设 `enableAMISDebug: true`
 2. `window.enableAMISDebug = true`
 3. URL 加 `?amisDebug=1`
@@ -114,6 +115,10 @@ JSON 节点按 `type` 字段从组件池找到对应 React Component，其余属
 ## 项目定制 skills（.claude/skills/）
 
 按任务选：**使用 amis**（写 JSON 配置）→ `amis-schema`；**开发 amis**（改源码）→ 组件开发 `amis-new-renderer`、主题定制 `amis-custom-theme`、测试 `amis-testing`、文档 `amis-docs`；**编辑器** → 插件开发 `amis-new-editor-plugin`、宿主接入 `amis-editor-usage`；**排查问题** → `amis-debug`。
+
+**skills 同步**：任何 skill 新增/修改后，运行 `bash scripts/sync-amis-skills.sh` 将 `.claude/skills/` 推送到独立仓库 https://gitee.com/liangxp/amis-skills.git（本地镜像 ~/IdeaProjects/amis-skills，脚本自动处理）。
+
+**项目源码或者控件 API 更新后** 一定要更新相应的 skills，同时将 skills 推送发布到仓库：https://gitee.com/liangxp/amis-skills.git
 
 ## 约定
 
